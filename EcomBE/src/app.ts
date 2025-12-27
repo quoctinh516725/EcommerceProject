@@ -4,6 +4,7 @@ import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { errorHandler } from './middlewares/errorHandler';
 import { notFoundHandler } from './middlewares/notFoundHandler';
+import authRoutes from './routes/auth.routes';
 import { env } from './config/env';
 
 const app: Express = express();
@@ -42,13 +43,13 @@ app.get('/health', (req, res) => {
   });
 });
 
-// API routes (sẽ thêm sau)
-// app.use('/api', routes);
+// API routes
+app.use('/api/auth', authRoutes);
 
 // 404 handler
 app.use(notFoundHandler);
 
-// Error handler (phải đặt cuối cùng)
+// Error handler 
 app.use(errorHandler);
 
 export default app;
