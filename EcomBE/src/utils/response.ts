@@ -20,9 +20,13 @@ export const sendSuccess = <T>(
 ): Response => {
   const response: ApiResponse<T> = {
     success: true,
-    ...(message && { message }),
-    ...(data && { data }),
   };
+  if (message) {
+    response.message = message;
+  }
+  if (data) {
+    response.data = data;
+  }
   return res.status(statusCode).json(response);
 };
 
