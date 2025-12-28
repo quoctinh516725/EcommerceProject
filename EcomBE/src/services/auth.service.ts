@@ -7,13 +7,11 @@ import {
   generateRefreshToken,
   verifyRefreshToken,
   getTokenRemainingTime,
-  TokenPayload,
 } from '../utils/jwt';
 import { addToBlacklist } from '../utils/blacklist';
 import {
   ConflictError,
   UnauthorizedError,
-  ValidationError,
   NotFoundError,
 } from '../errors/AppError';
 import { env } from '../config/env';
@@ -245,4 +243,3 @@ class AuthService {
 }
 
 export default new AuthService();
-
