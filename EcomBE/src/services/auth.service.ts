@@ -1,7 +1,9 @@
 import bcrypt from 'bcrypt';
-import { UserStatus } from '../constants';
+import { UserStatus, RoleCode } from '../constants';
 import userRepository from '../repositories/user.repository';
 import refreshTokenRepository from '../repositories/refreshToken.repository';
+import roleRepository from '../repositories/role.repository';
+import userRoleRepository from '../repositories/userRole.repository';
 import {
   generateAccessToken,
   generateRefreshToken,
@@ -71,11 +73,26 @@ class AuthService {
       fullName: input.fullName,
     });
 
+    let roleCodes =[RoleCode.USER];
+
+    // Assign default USER role
+    try {
+      const userRole = await roleRepository.findByCode(RoleCode.USER);
+      if (userRole) {
+        await userRoleRepository.assignRoleToUser(user.id, userRole.id);
+      }
+    } catch (error) {
+      // Ignore if role not found (will be assigned later via seed)
+      roleCodes =[]
+      console.warn('Could not assign USER role to new user:', error);
+    }
+
     // Generate tokens
     const accessToken = generateAccessToken({
       userId: user.id,
       email: user.email,
       username: user.username,
+      roles: roleCodes,
     });
 
     const refreshTokenString = generateRefreshToken(user.id);
@@ -134,18 +151,23 @@ class AuthService {
     // Revoke all existing refresh tokens (optional - for security)
     await refreshTokenRepository.revokeAllByUserId(user.id);
 
+    // Get user roles for token
+    const userRoles = await userRoleRepository.getUserRoles(user.id);
+    const roleCodes = userRoles.map((role: any) => role.code);
+
     // Generate new tokens
     const accessToken = generateAccessToken({
       userId: user.id,
       email: user.email,
       username: user.username,
+      roles: roleCodes,
     });
 
     const refreshTokenString = generateRefreshToken(user.id);
 
     // Calculate refresh token expiration (7 days from now)
     const refreshTokenExpiry = new Date();
-    refreshTokenExpiry.setDate(refreshTokenExpiry.getDate() + 7);
+    refreshTokenExpiry.setDate(refreshTokenExpiry.getDate() + parseInt(env.JWT_REFRESH_EXPIRES_IN!));
 
     // Save refresh token to database
     await refreshTokenRepository.create({
@@ -173,9 +195,8 @@ class AuthService {
    */
   async refreshToken(refreshTokenString: string): Promise<{ accessToken: string }> {
     // Verify refresh token
-    let decoded;
     try {
-      decoded = verifyRefreshToken(refreshTokenString);
+      verifyRefreshToken(refreshTokenString);
     } catch (error) {
       throw new UnauthorizedError('Invalid refresh token');
     }
@@ -207,11 +228,16 @@ class AuthService {
       throw new UnauthorizedError('Account is inactive');
     }
 
+    // Get user roles for token
+    const userRoles = await userRoleRepository.getUserRoles(user.id);
+    const roleCodes = userRoles.map((role: any) => role.code);
+
     // Generate new access token
     const accessToken = generateAccessToken({
       userId: user.id,
       email: user.email,
       username: user.username,
+      roles: roleCodes,
     });
 
     return { accessToken };
