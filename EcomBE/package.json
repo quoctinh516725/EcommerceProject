@@ -9,7 +9,8 @@
     "start": "node dist/server.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "dotenv -e .env -- prisma migrate dev",
-    "prisma:studio": "prisma studio"
+    "prisma:studio": "prisma studio",
+    "seed:roles-permissions": "ts-node src/seed/roles-permissions.seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.1",

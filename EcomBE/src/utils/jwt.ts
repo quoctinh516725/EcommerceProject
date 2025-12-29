@@ -5,12 +5,14 @@ export interface TokenPayload {
   userId: string;
   email: string;
   username?: string;
+  roles?: string[]; // Array of role codes
 }
 
 export interface DecodedToken {
   userId: string;
   email: string;
   username?: string;
+  roles?: string[]; // Array of role codes
   iat?: number;
   exp?: number;
 }
