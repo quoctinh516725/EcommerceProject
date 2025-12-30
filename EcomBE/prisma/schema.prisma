@@ -27,9 +27,25 @@ model User {
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
   refreshTokens RefreshToken[]
-8  userRoles     UserRole[]
+  userRoles     UserRole[]
+  addresses     UserAddress[]
 
   @@map("users")
+}
+
+model UserAddress {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  receiverName   String   @map("receiver_name")
+  receiverPhone  String   @map("receiver_phone")
+  receiverAddress String @map("receiver_address")
+  isDefault      Boolean  @default(false) @map("is_default")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_addresses")
 }
 
 model RefreshToken {
