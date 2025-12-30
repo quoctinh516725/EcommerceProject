@@ -4,6 +4,7 @@ import { requirePermission } from '../middlewares/permission.middleware';
 import * as PermissionCodes from '../constants/permission-codes';
 import roleController from '../controllers/role.controller';
 import permissionController from '../controllers/permission.controller';
+import userController from '../controllers/user.controller';
 
 const router = Router();
 
@@ -45,6 +46,20 @@ permissionRoutes.put('/:id', permissionController.updatePermission);
 permissionRoutes.delete('/:id', permissionController.deletePermission);
 
 router.use('/permissions', permissionRoutes);
+
+// ==================== USERS ROUTES ====================
+// All user management routes require VIEW_USER or MANAGE_USER_STATUS permission
+const userRoutes = Router();
+userRoutes.use(requirePermission(PermissionCodes.PERMISSION_VIEW_USER));
+
+userRoutes.get('/', userController.getUsers);
+userRoutes.get('/:id', userController.getUserById);
+
+// Status management requires MANAGE_USER_STATUS permission
+userRoutes.patch('/:id/status', requirePermission(PermissionCodes.PERMISSION_MANAGE_USER_STATUS), userController.updateUserStatus);
+userRoutes.delete('/:id', requirePermission(PermissionCodes.PERMISSION_MANAGE_USER_STATUS), userController.deleteUser);
+
+router.use('/users', userRoutes);
 
 export default router;
 
