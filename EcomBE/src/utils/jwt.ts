@@ -5,12 +5,14 @@ export interface TokenPayload {
   userId: string;
   email: string;
   username?: string;
+  roles?: string[]; // Array of role codes
 }
 
 export interface DecodedToken {
   userId: string;
   email: string;
   username?: string;
+  roles?: string[]; // Array of role codes
   iat?: number;
   exp?: number;
 }
@@ -19,22 +21,24 @@ export interface DecodedToken {
  * Generate access token
  */
 export const generateAccessToken = (payload: TokenPayload): string => {
-  const expiresIn = env.JWT_ACCESS_EXPIRES_IN;
+  const secret = env.JWT_ACCESS_SECRET as string;
+  const expiresIn = env.JWT_ACCESS_EXPIRES_IN || '15m';
   
-  return jwt.sign(payload, env.JWT_ACCESS_SECRET!, {
-    expiresIn,
-  });
+  return jwt.sign(payload, secret, {
+    expiresIn: expiresIn,
+  } as jwt.SignOptions);
 };
 
 /**
  * Generate refresh token
  */
 export const generateRefreshToken = (userId: string): string => {
+  const secret = env.JWT_REFRESH_SECRET as string;
   const expiresIn = env.JWT_REFRESH_EXPIRES_IN || '7d';
   
-  return jwt.sign({ userId }, env.JWT_REFRESH_SECRET!, {
-    expiresIn,
-  });
+  return jwt.sign({ userId }, secret, {
+    expiresIn: expiresIn,
+  } as jwt.SignOptions);
 };
 
 /**

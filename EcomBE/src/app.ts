@@ -1,11 +1,15 @@
 import express, { Express } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import { errorHandler } from './middlewares/errorHandler';
 import { notFoundHandler } from './middlewares/notFoundHandler';
 import authRoutes from './routes/auth.routes';
 import { env } from './config/env';
+import adminRoutes from './routes/admin.routes';
+import profileRoutes from './routes/profile.routes';
+
 
 const app: Express = express();
 
@@ -30,6 +34,9 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
+// Cookie parser (must be before body parser)
+app.use(cookieParser());
+
 // Body parser
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -46,6 +53,9 @@ app.get('/health', (req, res) => {
 // API routes
 app.use('/api/auth', authRoutes);
 
+app.use('/api/admin', adminRoutes);
+
+app.use('/api/profile', profileRoutes);
 // 404 handler
 app.use(notFoundHandler);
 
