@@ -3,6 +3,7 @@ import userRoleRepository from '../repositories/userRole.repository';
 import { NotFoundError, ConflictError, ValidationError } from '../errors/AppError';
 import { UserStatus } from '../constants';
 import prisma from '../config/database';
+import { deleteUserCache } from '../utils/userCache';
 
 export interface UpdateUserProfileInput {
   fullName?: string;
@@ -190,9 +191,14 @@ class UserService {
       throw new NotFoundError('User not found');
     }
 
-    return userRepository.update(userId, {
+    const updatedUser = await userRepository.update(userId, {
       status: input.status,
     });
+
+    // Delete user cache to force re-authentication and check new status
+    await deleteUserCache(userId);
+
+    return updatedUser;
   }
 
   /**
@@ -204,9 +210,14 @@ class UserService {
       throw new NotFoundError('User not found');
     }
 
-    return userRepository.update(userId, {
+    const updatedUser = await userRepository.update(userId, {
       status: UserStatus.INACTIVE,
     });
+
+    // Delete user cache to force re-authentication
+    await deleteUserCache(userId);
+
+    return updatedUser;
   }
 }
 

@@ -9,6 +9,8 @@ import authRoutes from './routes/auth.routes';
 import { env } from './config/env';
 import adminRoutes from './routes/admin.routes';
 import profileRoutes from './routes/profile.routes';
+import publicRoutes from './routes/public.routes';
+import sellerRoutes from './routes/seller.routes';
 
 
 const app: Express = express();
@@ -17,22 +19,49 @@ const app: Express = express();
 app.use(helmet());
 
 // CORS configuration
+// Allow all origins for public routes (SEO-friendly)
+// For authenticated routes, credentials are required
 app.use(
   cors({
-    origin: env.NODE_ENV === 'production' 
-      ? process.env.FRONTEND_URL 
-      : ['http://localhost:3000', 'http://localhost:5173'],
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, Postman, etc.)
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      // In production, check against allowed origins
+      if (env.NODE_ENV === 'production') {
+        const allowedOrigins = process.env.FRONTEND_URL
+          ? [process.env.FRONTEND_URL]
+          : [];
+        if (allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          // For public routes, allow all origins in production too (SEO)
+          callback(null, true);
+        }
+      } else {
+        // In development, allow all origins
+        callback(null, true);
+      }
+    },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
 
-// Rate limiting
-const limiter = rateLimit({
+// Rate limiting for authenticated routes only
+// Public routes have their own rate limiting (higher limit)
+const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 requests per windowMs
   message: 'Too many requests from this IP, please try again later.',
 });
-app.use('/api/', limiter);
+app.use('/api/auth', authLimiter);
+app.use('/api/admin', authLimiter);
+app.use('/api/profile', authLimiter);
+app.use('/api/seller', authLimiter);
 
 // Cookie parser (must be before body parser)
 app.use(cookieParser());
@@ -51,11 +80,14 @@ app.get('/health', (req, res) => {
 });
 
 // API routes
+// Public routes (no authentication required, SEO-friendly)
+app.use('/api', publicRoutes);
+
+// Authenticated routes
 app.use('/api/auth', authRoutes);
-
 app.use('/api/admin', adminRoutes);
-
 app.use('/api/profile', profileRoutes);
+app.use('/api/seller', sellerRoutes);
 // 404 handler
 app.use(notFoundHandler);
 

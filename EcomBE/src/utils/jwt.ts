@@ -6,6 +6,7 @@ export interface TokenPayload {
   email: string;
   username?: string;
   roles?: string[]; // Array of role codes
+  shopId?: string; // Shop ID if user is a seller
 }
 
 export interface DecodedToken {
@@ -13,6 +14,7 @@ export interface DecodedToken {
   email: string;
   username?: string;
   roles?: string[]; // Array of role codes
+  shopId?: string; // Shop ID if user is a seller
   iat?: number;
   exp?: number;
 }
