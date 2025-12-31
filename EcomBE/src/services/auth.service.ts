@@ -9,13 +9,16 @@ import {
   generateRefreshToken,
   verifyRefreshToken,
   getTokenRemainingTime,
+  decodeToken,
 } from '../utils/jwt';
 import { addToBlacklist } from '../utils/blacklist';
+import { saveUserCache, deleteUserCache } from '../utils/userCache';
 import {
   ConflictError,
   UnauthorizedError,
   NotFoundError,
 } from '../errors/AppError';
+import shopRepository from '../repositories/shop.repository';
 import { env } from '../config/env';
 
 export interface RegisterInput {
@@ -108,6 +111,18 @@ class AuthService {
       expiredAt: refreshTokenExpiry,
     });
 
+    // Save user cache to Redis
+    const accessTokenTTL = getTokenRemainingTime(accessToken);
+    await saveUserCache(
+      user.id,
+      {
+        userId: user.id,
+        status: user.status as any,
+        roles: roleCodes,
+      },
+      accessTokenTTL
+    );
+
     return {
       user: {
         id: user.id,
@@ -155,12 +170,20 @@ class AuthService {
     const userRoles = await userRoleRepository.getUserRoles(user.id);
     const roleCodes = userRoles.map((role: any) => role.code);
 
+    // Get shop info if user is a seller (cache to avoid DB queries)
+    let shopId: string | undefined;
+    if (roleCodes.includes(RoleCode.SELLER)) {
+      const shop = await shopRepository.findBySellerId(user.id);
+      shopId = shop?.id;
+    }
+
     // Generate new tokens
     const accessToken = generateAccessToken({
       userId: user.id,
       email: user.email,
       username: user.username,
       roles: roleCodes,
+      shopId,
     });
 
     const refreshTokenString = generateRefreshToken(user.id);
@@ -175,6 +198,18 @@ class AuthService {
       token: refreshTokenString,
       expiredAt: refreshTokenExpiry,
     });
+
+    // Save user cache to Redis
+    const accessTokenTTL = getTokenRemainingTime(accessToken);
+    await saveUserCache(
+      user.id,
+      {
+        userId: user.id,
+        status: user.status as any,
+        roles: roleCodes,
+      },
+      accessTokenTTL
+    );
 
     return {
       user: {
@@ -232,13 +267,34 @@ class AuthService {
     const userRoles = await userRoleRepository.getUserRoles(user.id);
     const roleCodes = userRoles.map((role: any) => role.code);
 
+    // Get shop info if user is a seller (cache to avoid DB queries)
+    let shopId: string | undefined;
+    if (roleCodes.includes(RoleCode.SELLER)) {
+      const shop = await shopRepository.findBySellerId(user.id);
+      shopId = shop?.id;
+    }
+
     // Generate new access token
     const accessToken = generateAccessToken({
       userId: user.id,
       email: user.email,
       username: user.username,
       roles: roleCodes,
+      shopId,
     });
+
+    // Update user cache in Redis with new token TTL (include shopId)
+    const accessTokenTTL = getTokenRemainingTime(accessToken);
+    await saveUserCache(
+      user.id,
+      {
+        userId: user.id,
+        status: user.status as any,
+        roles: roleCodes,
+        shopId,
+      },
+      accessTokenTTL
+    );
 
     return { accessToken };
   }
@@ -248,14 +304,32 @@ class AuthService {
    */
   async logout(refreshTokenString: string, accessToken?: string): Promise<void> {
     // Revoke refresh token
+    let userId: string | null = null;
     try {
       const refreshToken = await refreshTokenRepository.findByToken(refreshTokenString);
       if (refreshToken && !refreshToken.revoked) {
+        userId = refreshToken.userId;
         await refreshTokenRepository.revoke(refreshTokenString);
       }
     } catch (error) {
       // Ignore if token not found
+    }
 
+    // Get userId from access token if not available from refresh token
+    if (!userId && accessToken) {
+      try {
+        const decoded = decodeToken(accessToken);
+        if (decoded) {
+          userId = decoded.userId;
+        }
+      } catch (error) {
+        // Ignore if token invalid
+      }
+    }
+
+    // Delete user cache from Redis
+    if (userId) {
+      await deleteUserCache(userId);
     }
 
     // Blacklist access token if provided

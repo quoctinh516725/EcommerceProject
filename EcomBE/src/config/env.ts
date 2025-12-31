@@ -23,6 +23,9 @@ export const env = {
 
   VNPAY_TMN_CODE: process.env.VNPAY_TMN_CODE ,
   VNPAY_HASH_SECRET: process.env.VNPAY_HASH_SECRET ,
+
+  MEILI_HOST: process.env.MEILI_HOST,
+  MEILI_API_KEY: process.env.MEILI_API_KEY
 };
 
 // Validate required env variables

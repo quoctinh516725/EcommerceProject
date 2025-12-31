@@ -3,6 +3,7 @@ import userRoleRepository from '../repositories/userRole.repository';
 import rolePermissionRepository from '../repositories/rolePermission.repository';
 import { ConflictError, NotFoundError } from '../errors/AppError';
 import { RoleStatus, RoleCode } from '../constants';
+import { deleteUserCache } from '../utils/userCache';
 
 export interface CreateRoleInput {
   code: string;
@@ -146,7 +147,12 @@ class RoleService {
       throw new ConflictError('Cannot assign inactive role to user');
     }
 
-    return userRoleRepository.assignRoleToUser(userId, role.id);
+    await userRoleRepository.assignRoleToUser(userId, role.id);
+
+    // Delete user cache to force refresh with new roles
+    await deleteUserCache(userId);
+
+    return { success: true };
   }
 
   /**
@@ -158,7 +164,12 @@ class RoleService {
       throw new NotFoundError('Role not found');
     }
 
-    return userRoleRepository.removeRoleFromUser(userId, role.id);
+    await userRoleRepository.removeRoleFromUser(userId, role.id);
+
+    // Delete user cache to force refresh with updated roles
+    await deleteUserCache(userId);
+
+    return { success: true };
   }
 
   /**
