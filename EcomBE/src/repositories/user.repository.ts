@@ -109,6 +109,43 @@ class UserRepository {
     });
     return user !== null;
   }
+
+  /**
+   * Find all users with pagination
+   */
+  async findAll(status?: string, page: number = 1, limit: number = 20) {
+    const where = status ? { status } : {};
+    const skip = (page - 1) * limit;
+
+    const [users, total] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          fullName: true,
+          phone: true,
+          avatarUrl: true,
+          gender: true,
+          dateOfBirth: true,
+          status: true,
+          lastLoginAt: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.user.count({ where }),
+    ]);
+
+    return {
+      users,
+      total,
+    };
+  }
 }
 
 export default new UserRepository();
