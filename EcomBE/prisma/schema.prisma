@@ -30,6 +30,7 @@ model User {
   userRoles     UserRole[]
   addresses     UserAddress[]
   shops  Shop[]
+  auditLogs AuditLog[]
 
   @@map("users")
 }
@@ -287,3 +288,32 @@ model ProductTag {
   @@map("product_tags")
 }
 
+
+model SystemSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String? // Use default string mapping
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("system_settings")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  action    String
+  resource  String?  // e.g., "product", "shop", "system_setting"
+  resourceId String? @map("resource_id") // ID of the affected resource
+  details   String? // JSON string details
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([action])
+  @@map("audit_logs")
+}
