@@ -74,7 +74,7 @@ class CategoryAttributeRepository {
   async createMany(attributes: CreateCategoryAttributeData[]) {
     return prisma.categoryAttribute.createMany({
       data: attributes,
-      skipDuplicates: true,
+      skipDuplicates: true as never,
     });
   }
 

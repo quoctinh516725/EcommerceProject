@@ -1,5 +1,6 @@
 import prisma from '../config/database';
 import { Prisma } from '@prisma/client';
+import { ProductStatus } from '../constants';
 
 export interface CreateProductData {
   shopId: string;
@@ -60,7 +61,7 @@ class ProductRepository {
         originalPrice: data.originalPrice
           ? new Prisma.Decimal(data.originalPrice)
           : undefined,
-        status: data.status ?? 'PENDING_APPROVAL',
+        status: data.status ?? ProductStatus.PENDING_APPROVAL,
       },
     });
   }
@@ -247,27 +248,39 @@ class ProductRepository {
   /**
    * Find products by status
    */
-  async findByStatus(status: string) {
-    return prisma.product.findMany({
-      where: { status },
-      include: {
-        shop: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
+  async findByStatus(status: string, page: number = 1, limit: number = 20) {
+    const skip = (page - 1) * limit;
+
+    const [products, total] = await Promise.all([
+      prisma.product.findMany({
+        where: { status },
+        include: {
+          shop: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+            },
+          },
+          category: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+            },
           },
         },
-        category: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-          },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.product.count({ where: { status } }),
+    ]);
+
+    return {
+      products,
+      total,
+    };
   }
 
   /**
@@ -275,7 +288,7 @@ class ProductRepository {
    */
   async findAllActive() {
     return prisma.product.findMany({
-      where: { status: 'ACTIVE' },
+      where: { status: ProductStatus.ACTIVE },
       include: {
         images: true,
         variants: true,

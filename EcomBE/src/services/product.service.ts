@@ -2,14 +2,13 @@ import productRepository from '../repositories/product.repository';
 import productImageRepository from '../repositories/productImage.repository';
 import productVariantRepository from '../repositories/productVariant.repository';
 import productTagRepository from '../repositories/productTag.repository';
-import productAttributeRepository from '../repositories/productAttribute.repository';
-import categoryAttributeRepository from '../repositories/categoryAttribute.repository';
-import attributeValueRepository from '../repositories/attributeValue.repository';
+
 import shopRepository from '../repositories/shop.repository';
 import categoryRepository from '../repositories/category.repository';
 import brandRepository from '../repositories/brand.repository';
 import { meiliClient } from '../libs/meilisearch';
 import { ConflictError, NotFoundError, ValidationError } from '../errors/AppError';
+import { ProductStatus } from '../constants';
 import prisma from '../config/database';
 import { Prisma } from '@prisma/client';
 import { generateSlug } from '../utils/slug';
@@ -162,7 +161,7 @@ class ProductService {
     // Get all variants to calculate min/max price
     const variants = await productVariantRepository.findByProductId(product.id);
     const prices = variants
-      .filter((v) => v.status === 'ACTIVE')
+      .filter((v) => v.status === ProductStatus.ACTIVE)
       .map((v) => parseFloat(v.price.toString()));
     
     const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
@@ -218,9 +217,9 @@ class ProductService {
         return;
       }
 
-      // Only sync active products
-      if (product.status !== 'ACTIVE') {
-        // Delete from MeiliSearch if not active
+      // Only sync active products (exclude BANNED, REJECTED, INACTIVE, etc.)
+      if (product.status !== ProductStatus.ACTIVE) {
+        // Delete from MeiliSearch if not active (including BANNED products)
         const index = meiliClient.index(MEILI_INDEX_NAME);
         await index.deleteDocument(productId);
         return;
@@ -271,17 +270,37 @@ class ProductService {
   }
 
   /**
-   * Get products by shop ID
+   * Get all products (for public - only ACTIVE by default)
    */
-  async getProductsByShopId(shopId: string, status?: string) {
-    return productRepository.findByShopId(shopId, status);
+  async getAllProducts(status?: string, page?: number, limit?: number) {
+    // Public can only view ACTIVE products
+    const productStatus = status || ProductStatus.ACTIVE;
+    
+    // If status is provided and not ACTIVE, only allow ACTIVE for public
+    if (status && status !== ProductStatus.ACTIVE) {
+      throw new ValidationError('Public can only view ACTIVE products');
+    }
+
+    const { products, total } = await productRepository.findAll(productStatus, page, limit);
+
+    return {
+      products,
+      total,
+    };
   }
 
   /**
-   * Get products by category ID
+   * Get products by shop ID with pagination
    */
-  async getProductsByCategoryId(categoryId: string, status?: string) {
-    return productRepository.findByCategoryId(categoryId, status);
+  async getProductsByShopId(shopId: string, status?: string, page?: number, limit?: number) {
+    return productRepository.findByShopId(shopId, status, page, limit);
+  }
+
+  /**
+   * Get products by category ID with pagination
+   */
+  async getProductsByCategoryId(categoryId: string, status?: string, page?: number, limit?: number) {
+    return productRepository.findByCategoryId(categoryId, status, page, limit);
   }
 
   /**
@@ -337,7 +356,7 @@ class ProductService {
           originalPrice: input.originalPrice
             ? new Prisma.Decimal(input.originalPrice)
             : null,
-          status: input.status || 'PENDING_APPROVAL',
+          status: input.status || ProductStatus.PENDING_APPROVAL,
         },
       });
 
@@ -414,7 +433,7 @@ class ProductService {
               price: new Prisma.Decimal(variantInput.price),
               stock: variantInput.stock,
               weight: variantInput.weight,
-              status: variantInput.status || 'ACTIVE',
+              status: variantInput.status ,
             },
           });
 
@@ -438,7 +457,7 @@ class ProductService {
             productId: newProduct.id,
             tag,
           })),
-          skipDuplicates: true,
+          skipDuplicates: true as never,
         });
       }
 
@@ -559,9 +578,12 @@ class ProductService {
       if (query.status) {
         filters.push(`status = "${query.status}"`);
       } else {
-        // Default to active products only
-        filters.push(`status = "ACTIVE"`);
+        // Default to active products only (exclude BANNED and REJECTED)
+        filters.push(`status = "${ProductStatus.ACTIVE}"`);
       }
+      
+      // Always exclude BANNED products from public search
+      filters.push(`status != "${ProductStatus.BANNED}"`);
       if (query.minPrice !== undefined) {
         filters.push(`minPrice >= ${query.minPrice}`);
       }
@@ -633,7 +655,7 @@ class ProductService {
     if (query.status) {
       where.status = query.status;
     } else {
-      where.status = 'ACTIVE';
+      where.status = ProductStatus.ACTIVE;
     }
 
     // Simple text search on name and description

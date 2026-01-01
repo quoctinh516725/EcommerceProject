@@ -47,7 +47,7 @@ class AttributeValueRepository {
   async createMany(values: CreateAttributeValueData[]) {
     return prisma.attributeValue.createMany({
       data: values,
-      skipDuplicates: true,
+      skipDuplicates: true as never,
     });
   }
 

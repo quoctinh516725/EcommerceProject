@@ -79,12 +79,66 @@ class ShopRepository {
   /**
    * Find all shops
    */
-  async findAll(status?: string) {
+  async findAll(status?: string, page: number = 1, limit: number = 20) {
     const where = status ? { status } : {};
-    return prisma.shop.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-    });
+    const skip = (page - 1) * limit;
+    
+    const [shops, total] = await Promise.all([
+      prisma.shop.findMany({
+        where,
+        include: {
+          seller: {
+            select: {
+              id: true,
+              username: true,
+              email: true,
+              fullName: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.shop.count({ where }),
+    ]);
+
+    return {
+      shops,
+      total,
+    };
+  }
+
+  /**
+   * Find shops by status
+   */
+  async findByStatus(status: string, page: number = 1, limit: number = 20) {
+    const skip = (page - 1) * limit;
+    
+    const [shops, total] = await Promise.all([
+      prisma.shop.findMany({
+        where: { status },
+        include: {
+          seller: {
+            select: {
+              id: true,
+              username: true,
+              email: true,
+              fullName: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.shop.count({ where: { status } }),
+    ]);
+
+    return {
+      shops,
+      total,
+    };
   }
 
   /**
