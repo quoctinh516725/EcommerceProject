@@ -3,6 +3,7 @@ import productService from '../../services/product.service';
 import { sendSuccess } from '../../utils/response';
 import { NotFoundError } from '../../errors/AppError';
 import { getCache, setCache } from '../../utils/cache';
+import { ProductStatus } from '../../constants';
 
 const CACHE_KEY_PRODUCT_SLUG = 'product:slug:';
 const CACHE_KEY_PRODUCT_ID = 'product:id:';
@@ -15,11 +16,13 @@ class ProductController {
    */
   getAllProducts = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { page, limit, status } = req.query;
+      const { page, limit } = req.query;
 
       const pageNum = page ? parseInt(page as string, 10) : 1;
       const limitNum = limit ? parseInt(limit as string, 10) : 20;
-      const productStatus = (status as string) || 'ACTIVE';
+      // Public can only view ACTIVE products
+      const productStatus = ProductStatus.ACTIVE;
+      
 
       const { products, total } = await productService.getAllProducts(productStatus, pageNum, limitNum);
 
@@ -54,7 +57,7 @@ class ProductController {
       const cached = await getCache<any>(cacheKey);
       if (cached) {
         // Only return active products
-        if (cached.status !== 'ACTIVE') {
+        if (cached.status !== ProductStatus.ACTIVE) {
           throw new NotFoundError('Product not found');
         }
         sendSuccess(res, cached, 'Product retrieved successfully');
@@ -64,7 +67,7 @@ class ProductController {
       const product = await productService.getProductById(id);
 
       // Only return active products
-      if (product.status !== 'ACTIVE') {
+      if (product.status !== ProductStatus.ACTIVE) {
         throw new NotFoundError('Product not found');
       }
 
@@ -137,7 +140,7 @@ class ProductController {
       const cached = await getCache<any>(cacheKey);
       if (cached) {
         // Only return active products
-        if (cached.status !== 'ACTIVE') {
+        if (cached.status !== ProductStatus.ACTIVE) {
           throw new NotFoundError('Product not found');
         }
         sendSuccess(res, cached, 'Product retrieved successfully');
@@ -147,7 +150,7 @@ class ProductController {
       const product = await productService.getProductBySlug(slug);
 
       // Only return active products
-      if (product.status !== 'ACTIVE') {
+      if (product.status !== ProductStatus.ACTIVE) {
         throw new NotFoundError('Product not found');
       }
 
@@ -171,7 +174,7 @@ class ProductController {
 
       const pageNum = page ? parseInt(page as string, 10) : 1;
       const limitNum = limit ? parseInt(limit as string, 10) : 20;
-      const productStatus = (status as string) || 'ACTIVE';
+      const productStatus = (status as string) || ProductStatus.ACTIVE;
 
       // Get products with pagination at database level
       const { products, total } = await productService.getProductsByCategoryId(
@@ -210,7 +213,7 @@ class ProductController {
 
       const pageNum = page ? parseInt(page as string, 10) : 1;
       const limitNum = limit ? parseInt(limit as string, 10) : 20;
-      const productStatus = (status as string) || 'ACTIVE';
+      const productStatus = (status as string) || ProductStatus.ACTIVE;
 
       // Get products with pagination at database level
       const { products, total } = await productService.getProductsByShopId(

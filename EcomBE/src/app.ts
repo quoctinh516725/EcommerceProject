@@ -11,6 +11,7 @@ import adminRoutes from './routes/admin.routes';
 import profileRoutes from './routes/profile.routes';
 import publicRoutes from './routes/public.routes';
 import sellerRoutes from './routes/seller.routes';
+import staffRoutes from './routes/staff.routes';
 
 
 const app: Express = express();
@@ -62,6 +63,7 @@ app.use('/api/auth', authLimiter);
 app.use('/api/admin', authLimiter);
 app.use('/api/profile', authLimiter);
 app.use('/api/seller', authLimiter);
+app.use('/api/staff', authLimiter);
 
 // Cookie parser (must be before body parser)
 app.use(cookieParser());
@@ -88,6 +90,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/seller', sellerRoutes);
+app.use('/api/staff', staffRoutes);
 // 404 handler
 app.use(notFoundHandler);
 

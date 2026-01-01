@@ -2,6 +2,7 @@ import productService from '../product.service';
 import shopRepository from '../../repositories/shop.repository';
 import { NotFoundError, ForbiddenError } from '../../errors/AppError';
 import { CreateProductInput, UpdateProductInput } from '../product.service';
+import { ProductStatus } from '../../constants';
 
 class SellerProductService {
   /**
@@ -126,8 +127,8 @@ class SellerProductService {
     }
 
     // Seller can only set certain statuses
-    const allowedStatuses = ['PENDING_APPROVAL', 'ACTIVE', 'INACTIVE'];
-    if (!allowedStatuses.includes(status)) {
+    const allowedStatuses = [ProductStatus.PENDING_APPROVAL, ProductStatus.ACTIVE, ProductStatus.INACTIVE, ProductStatus.REJECTED, ProductStatus.OUT_OF_STOCK, ProductStatus.DISCONTINUED];
+    if (!allowedStatuses.includes(status as any)) {
       throw new ForbiddenError(`Sellers can only set product status to: ${allowedStatuses.join(', ')}`);
     }
 

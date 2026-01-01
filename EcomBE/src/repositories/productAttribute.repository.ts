@@ -84,7 +84,7 @@ class ProductAttributeRepository {
         attributeId: attr.attributeId,
         attributeValueId: attr.attributeValueId ?? null,
       })),
-      skipDuplicates: true,
+      skipDuplicates: true as never,
     });
   }
 
