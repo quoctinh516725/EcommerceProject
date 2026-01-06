@@ -1,10 +1,10 @@
-import { Request, Response, NextFunction } from 'express';
-import brandService from '../../services/brand.service';
-import { sendSuccess } from '../../utils/response';
-import { getCache, setCache } from '../../utils/cache';
+import { Request, Response, NextFunction } from "express";
+import brandService from "../../services/brand.service";
+import { sendSuccess } from "../../utils/response";
+import { getCache, setCache } from "../../utils/cache";
 
-const CACHE_KEY_BRANDS = 'brands:all';
-const CACHE_KEY_BRAND_SLUG = 'brand:slug:';
+const CACHE_KEY_BRANDS = "brands:all";
+const CACHE_KEY_BRAND_SLUG = "brand:slug:";
 const CACHE_TTL = 3600; // 1 hour
 
 class BrandController {
@@ -12,12 +12,16 @@ class BrandController {
    * GET /brands
    * Get all brands
    */
-  getAllBrands = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  getAllBrands = async (
+    _req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       // Try to get from cache
       const cached = await getCache<any>(CACHE_KEY_BRANDS);
       if (cached) {
-        sendSuccess(res, cached, 'Brands retrieved successfully');
+        sendSuccess(res, cached, "Brands retrieved successfully");
         return;
       }
 
@@ -26,7 +30,7 @@ class BrandController {
       // Cache the result
       await setCache(CACHE_KEY_BRANDS, brands, CACHE_TTL);
 
-      sendSuccess(res, brands, 'Brands retrieved successfully');
+      sendSuccess(res, brands, "Brands retrieved successfully");
     } catch (error) {
       next(error);
     }
@@ -36,7 +40,11 @@ class BrandController {
    * GET /brands/:slug
    * Get brand by slug
    */
-  getBrandBySlug = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  getBrandBySlug = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const { slug } = req.params;
 
@@ -44,7 +52,7 @@ class BrandController {
       const cacheKey = `${CACHE_KEY_BRAND_SLUG}${slug}`;
       const cached = await getCache<any>(cacheKey);
       if (cached) {
-        sendSuccess(res, cached, 'Brand retrieved successfully');
+        sendSuccess(res, cached, "Brand retrieved successfully");
         return;
       }
 
@@ -53,7 +61,7 @@ class BrandController {
       // Cache the result
       await setCache(cacheKey, brand, CACHE_TTL);
 
-      sendSuccess(res, brand, 'Brand retrieved successfully');
+      sendSuccess(res, brand, "Brand retrieved successfully");
     } catch (error) {
       next(error);
     }
@@ -61,5 +69,3 @@ class BrandController {
 }
 
 export default new BrandController();
-
-

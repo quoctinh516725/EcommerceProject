@@ -1,7 +1,7 @@
-import { Request, Response, NextFunction } from 'express';
-import shopRepository from '../repositories/shop.repository';
-import productRepository from '../repositories/product.repository';
-import { ForbiddenError, NotFoundError } from '../errors/AppError';
+import { Request, Response, NextFunction } from "express";
+import shopRepository from "../repositories/shop.repository";
+import productRepository from "../repositories/product.repository";
+import { ForbiddenError, NotFoundError } from "../errors/AppError";
 
 // Extend Express Request to include shop and product
 declare global {
@@ -20,30 +20,31 @@ declare global {
  */
 export const requireShopOwnership = async (
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
     if (!req.user || !req.user.userId) {
-      throw new ForbiddenError('Authentication required');
+      throw new ForbiddenError("Authentication required");
     }
 
     const userId = req.user.userId;
     const shopIdFromToken = req.user.shopId;
-    const shopIdFromParam = req.params.shopId || req.body.shopId || req.params.id;
+    const shopIdFromParam =
+      req.params.shopId || req.body.shopId || req.params.id;
 
     // If shopId is in token, use it directly (no DB query)
     if (shopIdFromToken && shopIdFromParam) {
       if (shopIdFromToken !== shopIdFromParam) {
-        throw new ForbiddenError('You do not own this shop');
+        throw new ForbiddenError("You do not own this shop");
       }
       // Verify shop exists and belongs to user (one-time verification)
       const shop = await shopRepository.findById(shopIdFromToken);
       if (!shop) {
-        throw new NotFoundError('Shop not found');
+        throw new NotFoundError("Shop not found");
       }
       if (shop.sellerId !== userId) {
-        throw new ForbiddenError('You do not own this shop');
+        throw new ForbiddenError("You do not own this shop");
       }
       req.shop = shop;
       return next();
@@ -53,10 +54,10 @@ export const requireShopOwnership = async (
     if (!shopIdFromToken && shopIdFromParam) {
       const shop = await shopRepository.findById(shopIdFromParam);
       if (!shop) {
-        throw new NotFoundError('Shop not found');
+        throw new NotFoundError("Shop not found");
       }
       if (shop.sellerId !== userId) {
-        throw new ForbiddenError('You do not own this shop');
+        throw new ForbiddenError("You do not own this shop");
       }
       req.shop = shop;
       return next();
@@ -66,13 +67,13 @@ export const requireShopOwnership = async (
     if (!shopIdFromParam) {
       const shop = await shopRepository.findBySellerId(userId);
       if (!shop) {
-        throw new NotFoundError('Shop not found');
+        throw new NotFoundError("Shop not found");
       }
       req.shop = shop;
       return next();
     }
 
-    throw new ForbiddenError('Shop ownership verification failed');
+    throw new ForbiddenError("Shop ownership verification failed");
   } catch (error) {
     next(error);
   }
@@ -84,12 +85,12 @@ export const requireShopOwnership = async (
  */
 export const requireProductOwnership = async (
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
     if (!req.user || !req.user.userId) {
-      throw new ForbiddenError('Authentication required');
+      throw new ForbiddenError("Authentication required");
     }
 
     const userId = req.user.userId;
@@ -97,19 +98,19 @@ export const requireProductOwnership = async (
     const productId = req.params.productId || req.params.id;
 
     if (!productId) {
-      throw new NotFoundError('Product ID is required');
+      throw new NotFoundError("Product ID is required");
     }
 
     // Get product
     const product = await productRepository.findById(productId);
     if (!product) {
-      throw new NotFoundError('Product not found');
+      throw new NotFoundError("Product not found");
     }
 
     // If shopId is in token, use it directly (no DB query for shop)
     if (shopIdFromToken) {
       if (product.shopId !== shopIdFromToken) {
-        throw new ForbiddenError('You do not own this product');
+        throw new ForbiddenError("You do not own this product");
       }
       req.product = product;
       req.shopId = shopIdFromToken;
@@ -119,10 +120,10 @@ export const requireProductOwnership = async (
     // If no shopId in token, verify shop ownership from DB
     const shop = await shopRepository.findById(product.shopId);
     if (!shop) {
-      throw new NotFoundError('Shop not found');
+      throw new NotFoundError("Shop not found");
     }
     if (shop.sellerId !== userId) {
-      throw new ForbiddenError('You do not own this product');
+      throw new ForbiddenError("You do not own this product");
     }
 
     req.product = product;
@@ -138,12 +139,12 @@ export const requireProductOwnership = async (
  */
 export const requireShop = async (
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
     if (!req.user || !req.user.userId) {
-      throw new ForbiddenError('Authentication required');
+      throw new ForbiddenError("Authentication required");
     }
 
     const userId = req.user.userId;
@@ -153,7 +154,7 @@ export const requireShop = async (
     if (shopIdFromToken) {
       const shop = await shopRepository.findById(shopIdFromToken);
       if (!shop) {
-        throw new NotFoundError('Shop not found');
+        throw new NotFoundError("Shop not found");
       }
       req.shop = shop;
       return next();
@@ -162,7 +163,9 @@ export const requireShop = async (
     // Get shop from DB
     const shop = await shopRepository.findBySellerId(userId);
     if (!shop) {
-      throw new NotFoundError('You do not have a shop. Please create one first.');
+      throw new NotFoundError(
+        "You do not have a shop. Please create one first."
+      );
     }
 
     req.shop = shop;
@@ -171,4 +174,3 @@ export const requireShop = async (
     next(error);
   }
 };
-

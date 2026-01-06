@@ -1,5 +1,5 @@
-import prisma from '../config/database';
-import { Prisma } from '@prisma/client';
+import prisma from "../config/database";
+import { Prisma } from "@prisma/client";
 
 export interface CreateProductVariantData {
   productId: string;
@@ -30,7 +30,7 @@ class ProductVariantRepository {
   async findByProductId(productId: string) {
     return prisma.productVariant.findMany({
       where: { productId },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: "asc" },
     });
   }
 
@@ -44,7 +44,7 @@ class ProductVariantRepository {
         price: new Prisma.Decimal(data.price),
         stock: data.stock,
         weight: data.weight,
-        status: data.status ?? 'ACTIVE',
+        status: data.status ?? "ACTIVE",
       },
     });
   }
@@ -61,6 +61,31 @@ class ProductVariantRepository {
 
   async delete(id: string) {
     return prisma.productVariant.delete({ where: { id } });
+  }
+
+  async findByIds(ids: string[], select?: Prisma.ProductVariantSelect) {
+    return prisma.productVariant.findMany({
+      where: { id: { in: ids } },
+      select,
+    });
+  }
+
+  async decrementStock(tx: any, id: string, quantity: number) {
+    return (tx as any).productVariant.update({
+      where: { id },
+      data: {
+        stock: { decrement: quantity },
+      },
+    });
+  }
+
+  async incrementStock(tx: any, id: string, quantity: number) {
+    return (tx as any).productVariant.update({
+      where: { id },
+      data: {
+        stock: { increment: quantity },
+      },
+    });
   }
 }
 

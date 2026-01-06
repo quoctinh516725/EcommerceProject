@@ -1,7 +1,6 @@
-import { Request, Response } from 'express';
-import { NotFoundError } from '../errors/AppError';
+import { Request, Response } from "express";
+import { NotFoundError } from "../errors/AppError";
 
-export const notFoundHandler = (req: Request, res: Response) => {
+export const notFoundHandler = (req: Request, _res: Response) => {
   throw new NotFoundError(`Route ${req.originalUrl} not found`);
 };
-

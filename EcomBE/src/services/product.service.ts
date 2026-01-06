@@ -1,18 +1,22 @@
-import productRepository from '../repositories/product.repository';
-import productImageRepository from '../repositories/productImage.repository';
-import productVariantRepository from '../repositories/productVariant.repository';
-import productTagRepository from '../repositories/productTag.repository';
+import productRepository from "../repositories/product.repository";
+import productImageRepository from "../repositories/productImage.repository";
+import productVariantRepository from "../repositories/productVariant.repository";
+import productTagRepository from "../repositories/productTag.repository";
 
-import shopRepository from '../repositories/shop.repository';
-import categoryRepository from '../repositories/category.repository';
-import brandRepository from '../repositories/brand.repository';
-import { meiliClient } from '../libs/meilisearch';
-import { ConflictError, NotFoundError, ValidationError } from '../errors/AppError';
-import { ProductStatus } from '../constants';
-import prisma from '../config/database';
-import { Prisma } from '@prisma/client';
-import { generateSlug } from '../utils/slug';
-const MEILI_INDEX_NAME = 'products';
+import shopRepository from "../repositories/shop.repository";
+import categoryRepository from "../repositories/category.repository";
+import brandRepository from "../repositories/brand.repository";
+import { meiliClient } from "../libs/meilisearch";
+import {
+  ConflictError,
+  NotFoundError,
+  ValidationError,
+} from "../errors/AppError";
+import { ProductStatus } from "../constants";
+import prisma from "../config/database";
+import { Prisma } from "@prisma/client";
+import { generateSlug } from "../utils/slug";
+const MEILI_INDEX_NAME = "products";
 
 export interface CreateProductInput {
   shopId: string;
@@ -33,7 +37,10 @@ export interface CreateProductInput {
     stock: number;
     weight?: number;
     status?: string;
-    attributes?: Array<{ attributeId: string; attributeValueId?: string | null }>;
+    attributes?: Array<{
+      attributeId: string;
+      attributeValueId?: string | null;
+    }>;
   }>;
   tags?: string[];
 }
@@ -59,7 +66,12 @@ export interface SearchProductsQuery {
   status?: string;
   page?: number;
   limit?: number;
-  sortBy?: 'relevance' | 'price_asc' | 'price_desc' | 'created_at_desc' | 'rating_desc';
+  sortBy?:
+    | "relevance"
+    | "price_asc"
+    | "price_desc"
+    | "created_at_desc"
+    | "rating_desc";
 }
 
 export interface ProductSearchResult {
@@ -74,11 +86,14 @@ export interface ProductSearchResult {
  * Generate slug from name
  */
 
-
 /**
  * Generate SKU from variant name and product slug
  */
-const generateSku = (productSlug: string, variantName?: string, index?: number): string => {
+const generateSku = (
+  productSlug: string,
+  variantName?: string,
+  index?: number
+): string => {
   if (variantName) {
     const variantSlug = generateSlug(variantName);
     return `${productSlug}-${variantSlug}`;
@@ -94,15 +109,15 @@ class ProductService {
   private async ensureMeiliIndex() {
     try {
       const index = meiliClient.index(MEILI_INDEX_NAME);
-      
+
       // Try to get index settings to check if it exists
       try {
         await index.getSettings();
       } catch (error: any) {
         // Index doesn't exist, create it
-        if (error.code === 'index_not_found') {
+        if (error.code === "index_not_found") {
           await meiliClient.createIndex(MEILI_INDEX_NAME, {
-            primaryKey: 'id',
+            primaryKey: "id",
           });
         } else {
           throw error;
@@ -111,45 +126,45 @@ class ProductService {
 
       // Configure searchable attributes
       await index.updateSearchableAttributes([
-        'name',
-        'description',
-        'categoryName',
-        'brandName',
-        'shopName',
-        'tags',
+        "name",
+        "description",
+        "categoryName",
+        "brandName",
+        "shopName",
+        "tags",
       ]);
 
       // Configure filterable attributes
       await index.updateFilterableAttributes([
-        'categoryId',
-        'brandId',
-        'shopId',
-        'status',
-        'minPrice',
-        'maxPrice',
-        'rating',
+        "categoryId",
+        "brandId",
+        "shopId",
+        "status",
+        "minPrice",
+        "maxPrice",
+        "rating",
       ]);
 
       // Configure sortable attributes
       await index.updateSortableAttributes([
-        'minPrice',
-        'maxPrice',
-        'rating',
-        'soldCount',
-        'createdAt',
+        "minPrice",
+        "maxPrice",
+        "rating",
+        "soldCount",
+        "createdAt",
       ]);
 
       // Configure ranking rules
       await index.updateRankingRules([
-        'words',
-        'typo',
-        'proximity',
-        'attribute',
-        'sort',
-        'exactness',
+        "words",
+        "typo",
+        "proximity",
+        "attribute",
+        "sort",
+        "exactness",
       ]);
     } catch (error) {
-      console.error('Error ensuring MeiliSearch index:', error);
+      console.error("Error ensuring MeiliSearch index:", error);
       // Don't throw - allow service to work without MeiliSearch
     }
   }
@@ -163,7 +178,7 @@ class ProductService {
     const prices = variants
       .filter((v) => v.status === ProductStatus.ACTIVE)
       .map((v) => parseFloat(v.price.toString()));
-    
+
     const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
     const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
 
@@ -177,25 +192,29 @@ class ProductService {
 
     // Get category and brand info
     const category = await categoryRepository.findById(product.categoryId);
-    const brand = product.brandId ? await brandRepository.findById(product.brandId) : null;
+    const brand = product.brandId
+      ? await brandRepository.findById(product.brandId)
+      : null;
     const shop = await shopRepository.findById(product.shopId);
 
     return {
       id: product.id,
       name: product.name,
       slug: product.slug,
-      description: product.description || '',
-      thumbnailUrl: product.thumbnailUrl || '',
+      description: product.description || "",
+      thumbnailUrl: product.thumbnailUrl || "",
       imageUrls,
       categoryId: product.categoryId,
-      categoryName: category?.name || '',
-      brandId: product.brandId || '',
-      brandName: brand?.name || '',
+      categoryName: category?.name || "",
+      brandId: product.brandId || "",
+      brandName: brand?.name || "",
       shopId: product.shopId,
-      shopName: shop?.name || '',
+      shopName: shop?.name || "",
       minPrice,
       maxPrice,
-      originalPrice: product.originalPrice ? parseFloat(product.originalPrice.toString()) : null,
+      originalPrice: product.originalPrice
+        ? parseFloat(product.originalPrice.toString())
+        : null,
       status: product.status,
       rating: product.rating || 0,
       soldCount: product.soldCount || 0,
@@ -211,7 +230,7 @@ class ProductService {
   private async syncProductToMeiliSearch(productId: string) {
     try {
       await this.ensureMeiliIndex();
-      
+
       const product = await productRepository.findById(productId);
       if (!product) {
         return;
@@ -229,7 +248,10 @@ class ProductService {
       const index = meiliClient.index(MEILI_INDEX_NAME);
       await index.addDocuments([document]);
     } catch (error) {
-      console.error(`Error syncing product ${productId} to MeiliSearch:`, error);
+      console.error(
+        `Error syncing product ${productId} to MeiliSearch:`,
+        error
+      );
       // Don't throw - allow service to work without MeiliSearch
     }
   }
@@ -242,7 +264,10 @@ class ProductService {
       const index = meiliClient.index(MEILI_INDEX_NAME);
       await index.deleteDocument(productId);
     } catch (error) {
-      console.error(`Error deleting product ${productId} from MeiliSearch:`, error);
+      console.error(
+        `Error deleting product ${productId} from MeiliSearch:`,
+        error
+      );
       // Don't throw - allow service to work without MeiliSearch
     }
   }
@@ -253,7 +278,7 @@ class ProductService {
   async getProductById(id: string) {
     const product = await productRepository.findById(id);
     if (!product) {
-      throw new NotFoundError('Product not found');
+      throw new NotFoundError("Product not found");
     }
     return product;
   }
@@ -264,7 +289,7 @@ class ProductService {
   async getProductBySlug(slug: string) {
     const product = await productRepository.findBySlug(slug);
     if (!product) {
-      throw new NotFoundError('Product not found');
+      throw new NotFoundError("Product not found");
     }
     return product;
   }
@@ -275,13 +300,17 @@ class ProductService {
   async getAllProducts(status?: string, page?: number, limit?: number) {
     // Public can only view ACTIVE products
     const productStatus = status || ProductStatus.ACTIVE;
-    
+
     // If status is provided and not ACTIVE, only allow ACTIVE for public
     if (status && status !== ProductStatus.ACTIVE) {
-      throw new ValidationError('Public can only view ACTIVE products');
+      throw new ValidationError("Public can only view ACTIVE products");
     }
 
-    const { products, total } = await productRepository.findAll(productStatus, page, limit);
+    const { products, total } = await productRepository.findAll(
+      productStatus,
+      page,
+      limit
+    );
 
     return {
       products,
@@ -292,14 +321,24 @@ class ProductService {
   /**
    * Get products by shop ID with pagination
    */
-  async getProductsByShopId(shopId: string, status?: string, page?: number, limit?: number) {
+  async getProductsByShopId(
+    shopId: string,
+    status?: string,
+    page?: number,
+    limit?: number
+  ) {
     return productRepository.findByShopId(shopId, status, page, limit);
   }
 
   /**
    * Get products by category ID with pagination
    */
-  async getProductsByCategoryId(categoryId: string, status?: string, page?: number, limit?: number) {
+  async getProductsByCategoryId(
+    categoryId: string,
+    status?: string,
+    page?: number,
+    limit?: number
+  ) {
     return productRepository.findByCategoryId(categoryId, status, page, limit);
   }
 
@@ -310,20 +349,20 @@ class ProductService {
     // Validate shop
     const shop = await shopRepository.findById(input.shopId);
     if (!shop) {
-      throw new NotFoundError('Shop not found');
+      throw new NotFoundError("Shop not found");
     }
 
     // Validate category
     const category = await categoryRepository.findById(input.categoryId);
     if (!category) {
-      throw new NotFoundError('Category not found');
+      throw new NotFoundError("Category not found");
     }
 
     // Validate brand if provided
     if (input.brandId) {
       const brand = await brandRepository.findById(input.brandId);
       if (!brand) {
-        throw new NotFoundError('Brand not found');
+        throw new NotFoundError("Brand not found");
       }
     }
 
@@ -338,7 +377,7 @@ class ProductService {
 
     // Validate variants
     if (input.variants && input.variants.length === 0) {
-      throw new ValidationError('Product must have at least one variant');
+      throw new ValidationError("Product must have at least one variant");
     }
 
     // Create product with transaction
@@ -378,11 +417,13 @@ class ProductService {
           where: { categoryId: input.categoryId },
           include: { attribute: true },
         });
-        const allowedAttributeIds = new Set(categoryAttributes.map((ca) => ca.attributeId));
+        const allowedAttributeIds = new Set(
+          categoryAttributes.map((ca) => ca.attributeId)
+        );
 
         for (let index = 0; index < input.variants.length; index++) {
           const variantInput = input.variants[index];
-          
+
           // Generate SKU if not provided
           let sku = variantInput.sku;
           if (!sku) {
@@ -396,7 +437,9 @@ class ProductService {
               where: { sku },
             });
             if (existingVariant) {
-              throw new ConflictError(`Variant with SKU "${sku}" already exists`);
+              throw new ConflictError(
+                `Variant with SKU "${sku}" already exists`
+              );
             }
           }
 
@@ -433,7 +476,7 @@ class ProductService {
               price: new Prisma.Decimal(variantInput.price),
               stock: variantInput.stock,
               weight: variantInput.weight,
-              status: variantInput.status ,
+              status: variantInput.status,
             },
           });
 
@@ -487,14 +530,14 @@ class ProductService {
   async updateProduct(id: string, input: UpdateProductInput) {
     const product = await productRepository.findById(id);
     if (!product) {
-      throw new NotFoundError('Product not found');
+      throw new NotFoundError("Product not found");
     }
 
     // Validate category if changed
     if (input.categoryId && input.categoryId !== product.categoryId) {
       const category = await categoryRepository.findById(input.categoryId);
       if (!category) {
-        throw new NotFoundError('Category not found');
+        throw new NotFoundError("Category not found");
       }
     }
 
@@ -503,7 +546,7 @@ class ProductService {
       if (input.brandId) {
         const brand = await brandRepository.findById(input.brandId);
         if (!brand) {
-          throw new NotFoundError('Brand not found');
+          throw new NotFoundError("Brand not found");
         }
       }
     }
@@ -512,11 +555,13 @@ class ProductService {
     if (input.slug && input.slug !== product.slug) {
       const slugExists = await productRepository.slugExists(input.slug);
       if (slugExists) {
-        throw new ConflictError(`Product with slug "${input.slug}" already exists`);
+        throw new ConflictError(
+          `Product with slug "${input.slug}" already exists`
+        );
       }
     }
 
-    const updatedProduct = await productRepository.update(id, input);
+    await productRepository.update(id, input);
 
     // Sync to MeiliSearch (async, don't wait)
     this.syncProductToMeiliSearch(id).catch(console.error);
@@ -530,13 +575,13 @@ class ProductService {
   async deleteProduct(id: string) {
     const product = await productRepository.findById(id);
     if (!product) {
-      throw new NotFoundError('Product not found');
+      throw new NotFoundError("Product not found");
     }
 
     // Delete product (cascade will handle related records)
     await prisma.$transaction(async (tx) => {
       await tx.product.delete({ where: { id } });
-      
+
       // Decrement shop total products
       await tx.shop.update({
         where: { id: product.shopId },
@@ -555,10 +600,12 @@ class ProductService {
   /**
    * Search products using MeiliSearch
    */
-  async searchProducts(query: SearchProductsQuery): Promise<ProductSearchResult> {
+  async searchProducts(
+    query: SearchProductsQuery
+  ): Promise<ProductSearchResult> {
     try {
       await this.ensureMeiliIndex();
-      
+
       const index = meiliClient.index(MEILI_INDEX_NAME);
       const page = query.page || 1;
       const limit = query.limit || 20;
@@ -581,7 +628,7 @@ class ProductService {
         // Default to active products only (exclude BANNED and REJECTED)
         filters.push(`status = "${ProductStatus.ACTIVE}"`);
       }
-      
+
       // Always exclude BANNED products from public search
       filters.push(`status != "${ProductStatus.BANNED}"`);
       if (query.minPrice !== undefined) {
@@ -594,26 +641,26 @@ class ProductService {
       // Build sort
       let sort: string[] = [];
       switch (query.sortBy) {
-        case 'price_asc':
-          sort = ['minPrice:asc'];
+        case "price_asc":
+          sort = ["minPrice:asc"];
           break;
-        case 'price_desc':
-          sort = ['minPrice:desc'];
+        case "price_desc":
+          sort = ["minPrice:desc"];
           break;
-        case 'rating_desc':
-          sort = ['rating:desc'];
+        case "rating_desc":
+          sort = ["rating:desc"];
           break;
-        case 'created_at_desc':
-          sort = ['createdAt:desc'];
+        case "created_at_desc":
+          sort = ["createdAt:desc"];
           break;
-        case 'relevance':
+        case "relevance":
         default:
           // MeiliSearch default relevance
           break;
       }
 
-      const searchResult = await index.search(query.q || '', {
-        filter: filters.length > 0 ? filters.join(' AND ') : undefined,
+      const searchResult = await index.search(query.q || "", {
+        filter: filters.length > 0 ? filters.join(" AND ") : undefined,
         sort,
         limit,
         offset,
@@ -627,7 +674,7 @@ class ProductService {
         totalPages: Math.ceil((searchResult.estimatedTotalHits || 0) / limit),
       };
     } catch (error) {
-      console.error('Error searching products with MeiliSearch:', error);
+      console.error("Error searching products with MeiliSearch:", error);
       // Fallback to database search if MeiliSearch fails
       return this.searchProductsFallback(query);
     }
@@ -636,7 +683,9 @@ class ProductService {
   /**
    * Fallback database search when MeiliSearch is unavailable
    */
-  private async searchProductsFallback(query: SearchProductsQuery): Promise<ProductSearchResult> {
+  private async searchProductsFallback(
+    query: SearchProductsQuery
+  ): Promise<ProductSearchResult> {
     const page = query.page || 1;
     const limit = query.limit || 20;
     const skip = (page - 1) * limit;
@@ -661,8 +710,8 @@ class ProductService {
     // Simple text search on name and description
     if (query.q) {
       where.OR = [
-        { name: { contains: query.q, mode: 'insensitive' } },
-        { description: { contains: query.q, mode: 'insensitive' } },
+        { name: { contains: query.q, mode: "insensitive" } },
+        { description: { contains: query.q, mode: "insensitive" } },
       ];
     }
 
@@ -696,9 +745,10 @@ class ProductService {
         },
         skip,
         take: limit,
-        orderBy: query.sortBy === 'created_at_desc' 
-          ? { createdAt: 'desc' }
-          : { createdAt: 'desc' },
+        orderBy:
+          query.sortBy === "created_at_desc"
+            ? { createdAt: "desc" }
+            : { createdAt: "desc" },
       }),
       prisma.product.count({ where }),
     ]);
@@ -718,7 +768,7 @@ class ProductService {
   async reindexAllProducts() {
     try {
       await this.ensureMeiliIndex();
-      
+
       const products = await productRepository.findAllActive();
       const index = meiliClient.index(MEILI_INDEX_NAME);
 
@@ -729,7 +779,7 @@ class ProductService {
       await index.addDocuments(documents);
       return { success: true, count: documents.length };
     } catch (error) {
-      console.error('Error reindexing products:', error);
+      console.error("Error reindexing products:", error);
       throw error;
     }
   }
@@ -737,18 +787,21 @@ class ProductService {
   /**
    * Update product variant (with auto-sync to MeiliSearch)
    */
-  async updateVariant(variantId: string, data: {
-    sku?: string;
-    variantName?: string;
-    imageUrl?: string;
-    price?: string;
-    stock?: number;
-    weight?: number;
-    status?: string;
-  }) {
+  async updateVariant(
+    variantId: string,
+    data: {
+      sku?: string;
+      variantName?: string;
+      imageUrl?: string;
+      price?: string;
+      stock?: number;
+      weight?: number;
+      status?: string;
+    }
+  ) {
     const variant = await productVariantRepository.findById(variantId);
     if (!variant) {
-      throw new NotFoundError('Variant not found');
+      throw new NotFoundError("Variant not found");
     }
 
     // Check SKU uniqueness if changed
@@ -758,7 +811,9 @@ class ProductService {
         select: { id: true },
       });
       if (existingVariant && existingVariant.id !== variantId) {
-        throw new ConflictError(`Variant with SKU "${data.sku}" already exists`);
+        throw new ConflictError(
+          `Variant with SKU "${data.sku}" already exists`
+        );
       }
     }
 
@@ -784,7 +839,7 @@ class ProductService {
   async deleteVariant(variantId: string) {
     const variant = await productVariantRepository.findById(variantId);
     if (!variant) {
-      throw new NotFoundError('Variant not found');
+      throw new NotFoundError("Variant not found");
     }
 
     const productId = variant.productId;
@@ -797,10 +852,13 @@ class ProductService {
   /**
    * Update product image (with auto-sync to MeiliSearch)
    */
-  async updateImage(imageId: string, data: { imageUrl?: string; sortOrder?: number }) {
+  async updateImage(
+    imageId: string,
+    data: { imageUrl?: string; sortOrder?: number }
+  ) {
     const image = await productImageRepository.findById(imageId);
     if (!image) {
-      throw new NotFoundError('Image not found');
+      throw new NotFoundError("Image not found");
     }
 
     await productImageRepository.update(imageId, data);
@@ -817,7 +875,7 @@ class ProductService {
   async deleteImage(imageId: string) {
     const image = await productImageRepository.findById(imageId);
     if (!image) {
-      throw new NotFoundError('Image not found');
+      throw new NotFoundError("Image not found");
     }
 
     const productId = image.productId;
@@ -833,7 +891,7 @@ class ProductService {
   async addTag(productId: string, tag: string) {
     const product = await productRepository.findById(productId);
     if (!product) {
-      throw new NotFoundError('Product not found');
+      throw new NotFoundError("Product not found");
     }
 
     await productTagRepository.create({ productId, tag });
@@ -848,7 +906,7 @@ class ProductService {
   async deleteTag(tagId: string) {
     const tag = await productTagRepository.findById(tagId);
     if (!tag) {
-      throw new NotFoundError('Tag not found');
+      throw new NotFoundError("Tag not found");
     }
 
     const productId = tag.productId;
@@ -890,4 +948,3 @@ class ProductService {
 }
 
 export default new ProductService();
-

@@ -1,4 +1,4 @@
-import prisma from '../config/database';
+import prisma from "../config/database";
 
 export interface CreateCategoryData {
   parentId?: string | null;
@@ -33,14 +33,14 @@ class CategoryRepository {
     const where = activeOnly ? { isActive: true } : {};
     return prisma.category.findMany({
       where: { parentId, ...where },
-      orderBy: { sortOrder: 'asc' },
+      orderBy: { sortOrder: "asc" },
     });
   }
 
   async findAllActive() {
     return prisma.category.findMany({
       where: { isActive: true },
-      orderBy: { sortOrder: 'asc' },
+      orderBy: { sortOrder: "asc" },
     });
   }
 
@@ -49,7 +49,7 @@ class CategoryRepository {
    */
   async findAll() {
     return prisma.category.findMany({
-      orderBy: [{ level: 'asc' }, { sortOrder: 'asc' }],
+      orderBy: [{ level: "asc" }, { sortOrder: "asc" }],
     });
   }
 
@@ -59,7 +59,7 @@ class CategoryRepository {
   async findByParentId(parentId: string | null) {
     return prisma.category.findMany({
       where: { parentId },
-      orderBy: { sortOrder: 'asc' },
+      orderBy: { sortOrder: "asc" },
     });
   }
 
@@ -114,7 +114,6 @@ class CategoryRepository {
         sortOrder: cat.sortOrder ?? 0,
         isActive: cat.isActive ?? true,
       })),
-      skipDuplicates: true,
     });
   }
 
@@ -122,7 +121,7 @@ class CategoryRepository {
     const where = activeOnly ? { isActive: true } : {};
     const categories = await prisma.category.findMany({
       where,
-      orderBy: [{ level: 'asc' }, { sortOrder: 'asc' }],
+      orderBy: [{ level: "asc" }, { sortOrder: "asc" }],
     });
 
     const map = new Map<string, any>();
@@ -136,11 +135,7 @@ class CategoryRepository {
       const node = map.get(cat.id);
       if (cat.parentId) {
         const parent = map.get(cat.parentId);
-        if (parent) {
-          parent.children.push(node);
-        } else {
-          roots.push(node);
-        }
+        parent.children.push(node);
       } else {
         roots.push(node);
       }

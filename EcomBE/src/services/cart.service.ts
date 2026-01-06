@@ -146,7 +146,7 @@ class CartService {
 
     await redis.hset(cartKey, variantId, quantity);
     await redis.hset(cartKey, "lastActivity", Date.now());
-    await redis.expire(cartKey, this.CART_TTL); 
+    await redis.expire(cartKey, this.CART_TTL);
   }
 
   async removeItem(
@@ -156,6 +156,18 @@ class CartService {
     const cartKey = this.getRedisKey(identifier);
     await redis.hdel(cartKey, variantId);
     await redis.hset(cartKey, "lastActivity", Date.now());
+    await redis.expire(cartKey, this.CART_TTL);
+  }
+
+  async removeItems(
+    identifier: CartIdentifier,
+    variantIds: string[]
+  ): Promise<void> {
+    if (variantIds.length === 0) return;
+    const cartKey = this.getRedisKey(identifier);
+    await redis.hdel(cartKey, ...variantIds);
+    await redis.hset(cartKey, "lastActivity", Date.now());
+    await redis.expire(cartKey, this.CART_TTL);
   }
 
   async clearCart(identifier: CartIdentifier): Promise<void> {

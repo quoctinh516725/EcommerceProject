@@ -11,6 +11,7 @@ import { RoleCode } from "../constants";
 import { validatePagination } from "../validators/public.validator";
 import shopController from "../controllers/seller/shop.controller";
 import productController from "../controllers/seller/product.controller";
+import refundController from "../controllers/refund.controller";
 
 const router = Router();
 
@@ -77,6 +78,14 @@ router.patch(
   requirePermission(PermissionCode.UPDATE_PRODUCT),
   requireProductOwnership,
   productController.updateProductStatus
+);
+
+// ==================== REFUND/CANCEL ROUTES ====================
+router.patch(
+  "/refunds/:refundId",
+  requirePermission(PermissionCode.UPDATE_ORDER),
+  requireShop,
+  refundController.handleRefundRequest
 );
 
 export default router;

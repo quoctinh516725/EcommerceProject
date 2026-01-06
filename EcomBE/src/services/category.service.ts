@@ -1,6 +1,10 @@
-import categoryRepository from '../repositories/category.repository';
-import { ConflictError, NotFoundError, ValidationError } from '../errors/AppError';
-import { generateSlug } from '../utils/slug';
+import categoryRepository from "../repositories/category.repository";
+import {
+  ConflictError,
+  NotFoundError,
+  ValidationError,
+} from "../errors/AppError";
+import { generateSlug } from "../utils/slug";
 export interface CreateCategoryInput {
   parentId?: string | null;
   name: string;
@@ -45,7 +49,7 @@ class CategoryService {
   async getCategoryById(id: string) {
     const category = await categoryRepository.findById(id);
     if (!category) {
-      throw new NotFoundError('Category not found');
+      throw new NotFoundError("Category not found");
     }
     return category;
   }
@@ -56,7 +60,7 @@ class CategoryService {
   async getCategoryBySlug(slug: string) {
     const category = await categoryRepository.findBySlug(slug);
     if (!category) {
-      throw new NotFoundError('Category not found');
+      throw new NotFoundError("Category not found");
     }
     return category;
   }
@@ -64,7 +68,10 @@ class CategoryService {
   /**
    * Get children of a category
    */
-  async getCategoryChildren(parentId: string | null, activeOnly: boolean = false) {
+  async getCategoryChildren(
+    parentId: string | null,
+    activeOnly: boolean = false
+  ) {
     return categoryRepository.findChildren(parentId, activeOnly);
   }
 
@@ -85,7 +92,7 @@ class CategoryService {
     if (input.parentId) {
       const parent = await categoryRepository.findById(input.parentId);
       if (!parent) {
-        throw new NotFoundError('Parent category not found');
+        throw new NotFoundError("Parent category not found");
       }
       // Calculate level based on parent
       input.level = (parent.level || 0) + 1;
@@ -104,8 +111,8 @@ class CategoryService {
     });
 
     // Clear category cache when new category is created
-    const { deleteCachePattern } = await import('../utils/cache');
-    deleteCachePattern('category:*').catch(console.error);
+    const { deleteCachePattern } = await import("../utils/cache");
+    deleteCachePattern("category:*").catch(console.error);
 
     return newCategory;
   }
@@ -116,37 +123,38 @@ class CategoryService {
   async updateCategory(id: string, input: UpdateCategoryInput) {
     const category = await categoryRepository.findById(id);
     if (!category) {
-      throw new NotFoundError('Category not found');
+      throw new NotFoundError("Category not found");
     }
 
     // Check slug if provided
     if (input.slug && input.slug !== category.slug) {
       const slugExists = await categoryRepository.slugExists(input.slug);
       if (slugExists) {
-        throw new ConflictError(`Category with slug "${input.slug}" already exists`);
+        throw new ConflictError(
+          `Category with slug "${input.slug}" already exists`
+        );
       }
     }
 
     // Validate parent if changed
     if (input.parentId !== undefined && input.parentId !== category.parentId) {
-      if (input.parentId) {
-        const parent = await categoryRepository.findById(input.parentId);
+        const parent = await categoryRepository.findById(input.parentId!);
         if (!parent) {
-          throw new NotFoundError('Parent category not found');
+          throw new NotFoundError("Parent category not found");
         }
         // Prevent circular reference
         if (input.parentId === id) {
-          throw new ValidationError('Category cannot be its own parent');
+          throw new ValidationError("Category cannot be its own parent");
         }
         // Check if parent is not a descendant
-        const isDescendant = await this.isDescendant(input.parentId, id);
+        const isDescendant = await this.isDescendant(input.parentId!, id);
         if (isDescendant) {
-          throw new ValidationError('Category cannot be a descendant of itself');
+          throw new ValidationError(
+            "Category cannot be a descendant of itself"
+          );
         }
         input.level = (parent.level || 0) + 1;
-      } else {
-        input.level = 0;
-      }
+      
     }
 
     const updatedCategory = await categoryRepository.update(id, input);
@@ -154,7 +162,7 @@ class CategoryService {
     // If name changed, sync all related products to MeiliSearch
     if (input.name && input.name !== category.name) {
       // Import here to avoid circular dependency
-      const productService = (await import('./product.service')).default;
+      const productService = (await import("./product.service")).default;
       productService.syncProductsByCategoryId(id).catch(console.error);
     }
 
@@ -167,20 +175,22 @@ class CategoryService {
   async deleteCategory(id: string) {
     const category = await categoryRepository.findById(id);
     if (!category) {
-      throw new NotFoundError('Category not found');
+      throw new NotFoundError("Category not found");
     }
 
     // Check if category has children
     const children = await categoryRepository.findChildren(id);
     if (children.length > 0) {
-      throw new ConflictError('Cannot delete category with children. Please delete or move children first.');
+      throw new ConflictError(
+        "Cannot delete category with children. Please delete or move children first."
+      );
     }
 
     const deleted = await categoryRepository.delete(id);
 
     // Clear category cache when deleted
-    const { deleteCachePattern } = await import('../utils/cache');
-    deleteCachePattern('category:*').catch(console.error);
+    const { deleteCachePattern } = await import("../utils/cache");
+    deleteCachePattern("category:*").catch(console.error);
 
     return deleted;
   }
@@ -190,7 +200,7 @@ class CategoryService {
    */
   async createManyCategories(inputs: CreateCategoryInput[]) {
     if (!inputs || inputs.length === 0) {
-      throw new ValidationError('At least one category is required');
+      throw new ValidationError("At least one category is required");
     }
 
     // Validate all inputs and generate slugs
@@ -220,12 +230,18 @@ class CategoryService {
       // Validate parent if provided
       let level = 0;
       if (input.parentId) {
-        const parent = await categoryRepository.findById(input.parentId);
-        if (!parent) {
-          throw new NotFoundError(`Parent category with ID "${input.parentId}" not found`);
+        if (parentLevelMap.has(input.parentId)) {
+          level = parentLevelMap.get(input.parentId)! + 1;
+        } else {
+          const parent = await categoryRepository.findById(input.parentId);
+          if (!parent) {
+            throw new NotFoundError(
+              `Parent category with ID "${input.parentId}" not found`
+            );
+          }
+          level = (parent.level || 0) + 1;
+          parentLevelMap.set(input.parentId, parent.level || 0);
         }
-        level = (parent.level || 0) + 1;
-        parentLevelMap.set(input.parentId, parent.level || 0);
       } else if (input.level !== undefined) {
         level = input.level;
       }
@@ -248,7 +264,10 @@ class CategoryService {
   /**
    * Check if category is descendant of another
    */
-  private async isDescendant(ancestorId: string, descendantId: string): Promise<boolean> {
+  private async isDescendant(
+    ancestorId: string,
+    descendantId: string
+  ): Promise<boolean> {
     const category = await categoryRepository.findById(descendantId);
     if (!category || !category.parentId) {
       return false;
@@ -261,4 +280,3 @@ class CategoryService {
 }
 
 export default new CategoryService();
-
