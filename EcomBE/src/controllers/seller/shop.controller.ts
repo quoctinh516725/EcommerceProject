@@ -61,6 +61,20 @@ class SellerShopController {
       next(error);
     }
   };
+
+  /**
+   * GET /api/seller/shop/:id
+   * Get shop by id
+   */
+  getShopById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const shop = await sellerShopService.getShopById(id);
+      sendSuccess(res, shop, 'Shop retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  };
 }
 
 export default new SellerShopController();

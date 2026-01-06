@@ -1,7 +1,11 @@
-import shopRepository from '../../repositories/shop.repository';
-import { ConflictError, NotFoundError, ValidationError } from '../../errors/AppError';
-import { generateSlug } from '../../utils/slug';
-import { ShopStatus } from '../../constants';
+import shopRepository from "../../repositories/shop.repository";
+import {
+  ConflictError,
+  NotFoundError,
+  ValidationError,
+} from "../../errors/AppError";
+import { generateSlug } from "../../utils/slug";
+import { ShopStatus } from "../../constants";
 
 export interface CreateShopInput {
   name: string;
@@ -30,7 +34,7 @@ class SellerShopService {
   async getMyShop(sellerId: string) {
     const shop = await shopRepository.findBySellerId(sellerId);
     if (!shop) {
-      throw new NotFoundError('Shop not found. Please create a shop first.');
+      throw new NotFoundError("Shop not found. Please create a shop first.");
     }
     return shop;
   }
@@ -42,7 +46,7 @@ class SellerShopService {
     // Check if seller already has a shop
     const existingShop = await shopRepository.findBySellerId(sellerId);
     if (existingShop) {
-      throw new ConflictError('You already have a shop');
+      throw new ConflictError("You already have a shop");
     }
 
     // Generate slug if not provided
@@ -76,14 +80,16 @@ class SellerShopService {
   async updateShop(sellerId: string, input: UpdateShopInput) {
     const shop = await shopRepository.findBySellerId(sellerId);
     if (!shop) {
-      throw new NotFoundError('Shop not found');
+      throw new NotFoundError("Shop not found");
     }
 
     // Check slug if provided
     if (input.slug && input.slug !== shop.slug) {
       const slugExists = await shopRepository.slugExists(input.slug);
       if (slugExists) {
-        throw new ConflictError(`Shop with slug "${input.slug}" already exists`);
+        throw new ConflictError(
+          `Shop with slug "${input.slug}" already exists`
+        );
       }
     }
 
@@ -99,19 +105,31 @@ class SellerShopService {
   async updateShopStatus(sellerId: string, status: string) {
     const shop = await shopRepository.findBySellerId(sellerId);
     if (!shop) {
-      throw new NotFoundError('Shop not found');
+      throw new NotFoundError("Shop not found");
     }
 
     // Seller can only set ACTIVE or INACTIVE
     if (status !== ShopStatus.ACTIVE && status !== ShopStatus.INACTIVE) {
-      throw new ValidationError(`Sellers can only set shop status to ${ShopStatus.ACTIVE} or ${ShopStatus.INACTIVE}`);
+      throw new ValidationError(
+        `Sellers can only set shop status to ${ShopStatus.ACTIVE} or ${ShopStatus.INACTIVE}`
+      );
     }
 
     const updatedShop = await shopRepository.update(shop.id, { status });
 
     return updatedShop;
   }
+
+  /**
+   * Get shop by id
+   */
+  async getShopById(id: string) {
+    const shop = await shopRepository.findById(id);
+    if (!shop) {
+      throw new NotFoundError("Shop not found");
+    }
+    return shop;
+  }
 }
 
 export default new SellerShopService();
-
