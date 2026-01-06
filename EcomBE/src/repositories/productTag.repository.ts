@@ -1,4 +1,4 @@
-import prisma from '../config/database';
+import prisma from "../config/database";
 
 export interface CreateProductTagData {
   productId: string;
@@ -19,7 +19,7 @@ class ProductTagRepository {
   async findByProductId(productId: string) {
     return prisma.productTag.findMany({
       where: { productId },
-      orderBy: { tag: 'asc' },
+      orderBy: { tag: "asc" },
     });
   }
 
@@ -38,7 +38,6 @@ class ProductTagRepository {
   async createMany(tags: CreateProductTagData[]) {
     return prisma.productTag.createMany({
       data: tags,
-      skipDuplicates: true,
     });
   }
 
@@ -60,4 +59,3 @@ class ProductTagRepository {
 }
 
 export default new ProductTagRepository();
-

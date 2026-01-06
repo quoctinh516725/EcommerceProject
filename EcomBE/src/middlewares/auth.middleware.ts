@@ -1,9 +1,9 @@
-import { Request, Response, NextFunction } from 'express';
-import { verifyAccessToken, DecodedToken } from '../utils/jwt';
-import { isTokenBlacklisted } from '../utils/blacklist';
-import { getUserCache } from '../utils/userCache';
-import { UnauthorizedError } from '../errors/AppError';
-import { UserStatus } from '../constants';
+import { Request, Response, NextFunction } from "express";
+import { verifyAccessToken, DecodedToken } from "../utils/jwt";
+import { isTokenBlacklisted } from "../utils/blacklist";
+import { getUserCache } from "../utils/userCache";
+import { UnauthorizedError } from "../errors/AppError";
+import { UserStatus } from "../constants";
 
 // Extend Express Request to include user
 declare global {
@@ -20,15 +20,15 @@ declare global {
  */
 export const authenticate = async (
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
     // Get token from Authorization header
     const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new UnauthorizedError('No token provided');
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      throw new UnauthorizedError("No token provided");
     }
 
     const token = authHeader.substring(7); // Remove 'Bearer ' prefix
@@ -36,7 +36,7 @@ export const authenticate = async (
     // Check if token is blacklisted
     const isBlacklisted = await isTokenBlacklisted(token);
     if (isBlacklisted) {
-      throw new UnauthorizedError('Token has been revoked');
+      throw new UnauthorizedError("Token has been revoked");
     }
 
     // Verify token
@@ -44,16 +44,16 @@ export const authenticate = async (
 
     // Check user cache in Redis to verify user status and permissions
     const userCache = await getUserCache(decoded.userId);
-    
+
     if (!userCache) {
       // Cache not found - user may have been banned or cache expired
       // For security, we should reject the request
-      throw new UnauthorizedError('User session not found or expired');
+      throw new UnauthorizedError("User session not found or expired");
     }
 
     // Check if user is still active
     if (userCache.status !== UserStatus.ACTIVE) {
-      throw new UnauthorizedError('Account is inactive or banned');
+      throw new UnauthorizedError("Account is inactive or banned");
     }
 
     // Update decoded token with latest roles and shopId from cache (in case roles were revoked or shop changed)
@@ -68,7 +68,7 @@ export const authenticate = async (
     if (error instanceof UnauthorizedError) {
       next(error);
     } else {
-      next(new UnauthorizedError('Invalid or expired token'));
+      next(new UnauthorizedError("Invalid or expired token"));
     }
   }
 };
@@ -79,15 +79,15 @@ export const authenticate = async (
  */
 export const optionalAuthenticate = async (
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
-    
-    if (authHeader && authHeader.startsWith('Bearer ')) {
+
+    if (authHeader && authHeader.startsWith("Bearer ")) {
       const token = authHeader.substring(7);
-      
+
       // Check blacklist
       const isBlacklisted = await isTokenBlacklisted(token);
       if (!isBlacklisted) {
@@ -99,11 +99,10 @@ export const optionalAuthenticate = async (
         }
       }
     }
-    
+
     next();
   } catch (error) {
     // Ignore errors in optional auth
     next();
   }
 };
-

@@ -31,7 +31,11 @@ model User {
   addresses     UserAddress[]
   shops  Shop[]
   auditLogs AuditLog[]
+  cartSnapshot CartSnapshot?
 
+  masterOrders MasterOrder[]
+  payments     Payment[]
+  
   @@map("users")
 }
 
@@ -135,6 +139,8 @@ model Shop {
 
   seller   User     @relation(fields: [sellerId], references: [id])
   products Product[]
+  subOrders SubOrder[]
+  shippingRule ShopShippingRule?
 
   @@map("shops")
 }
@@ -195,6 +201,7 @@ model Product {
   images     ProductImage[]
   variants   ProductVariant[]
   tags       ProductTag[]
+  orderItems OrderItem[]
 
   @@map("products")
 }
@@ -316,4 +323,162 @@ model AuditLog {
   @@index([userId])
   @@index([action])
   @@map("audit_logs")
+}
+
+model CartSnapshot {
+  userId    String   @id @map("user_id")
+  items     String   // Stored as JSON string: { "productId": quantity, ... }
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("cart_snapshots")
+}
+
+model MasterOrder {
+  id              String   @id @default(uuid())
+  userId          String   @map("user_id")
+  orderCode       String   @unique @map("order_code")
+  
+  // Display Data
+  originalTotalAmount     Decimal  @map("original_total_amount") @db.Decimal(12, 2)
+  platformDiscount Decimal @default(0) @map("platform_discount") @db.Decimal(12, 2)
+  
+  // Info
+  receiverName    String   @map("receiver_name")
+  receiverPhone   String   @map("receiver_phone")
+  shippingAddress String   @map("shipping_address")
+  
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  user            User        @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  subOrders       SubOrder[]
+  payments        Payment[]
+
+  @@map("master_orders")
+}
+
+model SubOrder {
+  id                String   @id @default(uuid())
+  masterOrderId     String   @map("master_order_id")
+  shopId            String   @map("shop_id")
+  subOrderCode      String   @unique @map("sub_order_code")
+  
+  // Pricing
+  itemsTotal        Decimal  @map("items_total") @db.Decimal(12, 2) // Sum of items
+  shippingFee       Decimal  @default(0) @map("shipping_fee") @db.Decimal(12, 2) // Shop specific shipping
+  discountAmount    Decimal  @default(0) @map("discount_amount") @db.Decimal(12, 2) // Shop voucher
+  totalAmount       Decimal  @map("total_amount") @db.Decimal(12, 2) // (items + ship - disc)
+  
+  // Status State Machine
+  status            String   @default("PENDING_PAYMENT") @map("status") 
+  // PENDING_PAYMENT, PAID, PROCESSING, SHIPPING, DELIVERED, COMPLETED, CANCELLED, REFUNDED
+  
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  masterOrder       MasterOrder @relation(fields: [masterOrderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  shop              Shop        @relation(fields: [shopId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  orderItems        OrderItem[]
+  paymentAllocations PaymentAllocation[]
+  refunds           Refund[]
+
+  @@map("sub_orders")
+}
+
+model Payment {
+  id              String   @id @default(uuid())
+  masterOrderId   String   @map("master_order_id")
+  userId          String   @map("user_id")
+  
+  paymentMethod   String   @map("payment_method") // VNPAY, MOMO, COD...
+  totalAmount     Decimal  @map("total_amount") @db.Decimal(12, 2)
+  transactionId   String?  @map("transaction_id")
+  
+  status          String   @default("PENDING") // PENDING, SUCCESS, FAILED, EXPIRED
+  
+  paidAt          DateTime? @map("paid_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  
+  masterOrder     MasterOrder @relation(fields: [masterOrderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user            User        @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  allocations     PaymentAllocation[]
+  
+  @@map("payments")
+}
+
+model PaymentAllocation {
+  id              String   @id @default(uuid())
+  paymentId       String   @map("payment_id")
+  subOrderId      String   @map("sub_order_id")
+  
+  amount          Decimal  @map("amount") @db.Decimal(12, 2) // Amount allocated to this sub-order
+  refundedAmount  Decimal  @default(0) @map("refunded_amount") @db.Decimal(12, 2)
+  
+  createdAt       DateTime @default(now()) @map("created_at")
+  
+  payment         Payment  @relation(fields: [paymentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  subOrder        SubOrder @relation(fields: [subOrderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("payment_allocations")
+  @@unique([paymentId, subOrderId])
+}
+
+model Refund {
+  id              String   @id @default(uuid())
+  subOrderId      String   @map("sub_order_id")
+  paymentId       String?  @map("payment_id") // Optional if refunding COD or strict online
+  
+  amount          Decimal  @map("amount") @db.Decimal(12, 2)
+  reason          String
+  status          String   @default("REQUESTED") // REQUESTED, APPROVED, REFUNDED, REJECTED
+  
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  
+  subOrder        SubOrder @relation(fields: [subOrderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("refunds")
+}
+
+model OrderItem {
+  id          String   @id @default(uuid())
+  subOrderId  String   @map("sub_order_id")
+  productId   String   @map("product_id")
+  variantId   String?  @map("variant_id")
+  
+  quantity    Int
+  price       Decimal  @db.Decimal(12, 2)
+  
+  // Snapshot data
+  productName     String   @map("product_name")
+  variantName     String?  @map("variant_name")
+  totalPrice      Decimal  @map("total_price") @db.Decimal(12, 2)
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  subOrder    SubOrder @relation(fields: [subOrderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  product     Product  @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  
+  @@map("order_items")
+}
+
+model ShopShippingRule {
+  id           String   @id @default(uuid())
+  shopId       String   @unique @map("shop_id")
+  baseFee      Decimal  @default(0) @map("base_fee") @db.Decimal(12, 2)
+  extraPerItem Decimal  @default(0) @map("extra_per_item") @db.Decimal(12, 2)
+  freeShipMin  Decimal? @map("free_ship_min") @db.Decimal(12, 2)
+  
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  shop         Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@map("shop_shipping_rules")
 }

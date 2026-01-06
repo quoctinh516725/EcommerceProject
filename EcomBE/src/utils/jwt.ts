@@ -24,7 +24,7 @@ export interface DecodedToken {
  */
 export const generateAccessToken = (payload: TokenPayload): string => {
   const secret = env.JWT_ACCESS_SECRET as string;
-  const expiresIn = env.JWT_ACCESS_EXPIRES_IN || '15m';
+  const expiresIn = env.JWT_ACCESS_EXPIRES_IN;
   
   return jwt.sign(payload, secret, {
     expiresIn: expiresIn,
@@ -36,7 +36,7 @@ export const generateAccessToken = (payload: TokenPayload): string => {
  */
 export const generateRefreshToken = (userId: string): string => {
   const secret = env.JWT_REFRESH_SECRET as string;
-  const expiresIn = env.JWT_REFRESH_EXPIRES_IN || '7d';
+  const expiresIn = env.JWT_REFRESH_EXPIRES_IN;
   
   return jwt.sign({ userId }, secret, {
     expiresIn: expiresIn,

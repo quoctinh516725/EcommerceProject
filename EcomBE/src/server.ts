@@ -1,22 +1,24 @@
-import app from './app';
-import { env } from './config/env';
-import prisma from './config/database';
-import redis from './config/redis';
+import app from "./app";
+import { env } from "./config/env";
+import prisma from "./config/database";
+import redis from "./config/redis";
+import cartSyncWorker from "./workers/cartSync.worker";
+import orderCleanupWorker from "./workers/orderCleanup.worker";
 
 const PORT = env.PORT;
 
 // Graceful shutdown
 const gracefulShutdown = async () => {
-  console.log('Shutting down gracefully...');
-  
+  console.log("Shutting down gracefully...");
+
   // Close Prisma connection
   await prisma.$disconnect();
-  console.log('Prisma disconnected');
-  
+  console.log("Prisma disconnected");
+
   // Close Redis connection
   redis.disconnect();
-  console.log('Redis disconnected');
-  
+  console.log("Redis disconnected");
+
   process.exit(0);
 };
 
@@ -24,23 +26,26 @@ const gracefulShutdown = async () => {
 const server = app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
   console.log(`Environment: ${env.NODE_ENV}`);
+
+  // Start background workers
+  cartSyncWorker.start();
+  orderCleanupWorker.start();
 });
 
 // Handle unhandled promise rejections
-process.on('unhandledRejection', (err: Error) => {
-  console.error('❌ Unhandled Rejection:', err);
+process.on("unhandledRejection", (err: Error) => {
+  console.error("❌ Unhandled Rejection:", err);
   server.close(() => {
     gracefulShutdown();
   });
 });
 
 // Handle uncaught exceptions
-process.on('uncaughtException', (err: Error) => {
-  console.error('❌ Uncaught Exception:', err);
+process.on("uncaughtException", (err: Error) => {
+  console.error("❌ Uncaught Exception:", err);
   gracefulShutdown();
 });
 
 // Handle termination signals
-process.on('SIGTERM', gracefulShutdown);
-process.on('SIGINT', gracefulShutdown);
-
+process.on("SIGTERM", gracefulShutdown);
+process.on("SIGINT", gracefulShutdown);
