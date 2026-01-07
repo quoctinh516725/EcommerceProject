@@ -1,11 +1,34 @@
 import prisma from "../config/database";
 
+export interface CreateSubOrderData {
+  masterOrderId: string;
+  shopId: string;
+  subOrderCode: string;
+  itemsTotal: number;
+  shippingFee?: number;
+  discountAmount?: number;
+  commissionAmount?: number;
+  realAmount?: number;
+  totalAmount: number;
+  status?: string;
+  orderItems?: any; // Consider refining further if needed
+}
+
+export interface UpdateSubOrderData {
+  status?: string;
+  shippingFee?: number;
+  discountAmount?: number;
+  commissionAmount?: number;
+  realAmount?: number;
+  totalAmount?: number;
+}
+
 class SubOrderRepository {
-  async create(tx: any, data: any) {
+  async create(tx: any, data: CreateSubOrderData) {
     return (tx as any).subOrder.create({ data });
   }
 
-  async update(tx: any, id: string, data: any) {
+  async update(tx: any, id: string, data: UpdateSubOrderData) {
     return (tx as any).subOrder.update({
       where: { id },
       data,

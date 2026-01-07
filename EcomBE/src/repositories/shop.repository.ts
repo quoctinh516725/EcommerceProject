@@ -1,4 +1,4 @@
-import prisma from '../config/database';
+import prisma from "../config/database";
 
 export interface CreateShopData {
   sellerId: string;
@@ -82,7 +82,7 @@ class ShopRepository {
   async findAll(status?: string, page: number = 1, limit: number = 20) {
     const where = status ? { status } : {};
     const skip = (page - 1) * limit;
-    
+
     const [shops, total] = await Promise.all([
       prisma.shop.findMany({
         where,
@@ -96,7 +96,7 @@ class ShopRepository {
             },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip,
         take: limit,
       }),
@@ -114,7 +114,7 @@ class ShopRepository {
    */
   async findByStatus(status: string, page: number = 1, limit: number = 20) {
     const skip = (page - 1) * limit;
-    
+
     const [shops, total] = await Promise.all([
       prisma.shop.findMany({
         where: { status },
@@ -128,7 +128,7 @@ class ShopRepository {
             },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip,
         take: limit,
       }),
@@ -145,10 +145,10 @@ class ShopRepository {
    * Find active shops only
    */
   async findActiveShops() {
-    const { ShopStatus } = await import('../constants');
+    const { ShopStatus } = await import("../constants");
     return prisma.shop.findMany({
       where: { status: ShopStatus.ACTIVE },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
   }
 
@@ -166,7 +166,7 @@ class ShopRepository {
         description: data.description,
         logoUrl: data.logoUrl,
         backgroundUrl: data.backgroundUrl,
-        status: data.status || (await import('../constants')).ShopStatus.ACTIVE,
+        status: data.status || (await import("../constants")).ShopStatus.ACTIVE,
       },
     });
   }
@@ -229,4 +229,3 @@ class ShopRepository {
 }
 
 export default new ShopRepository();
-

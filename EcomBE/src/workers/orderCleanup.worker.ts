@@ -3,6 +3,7 @@ import { SubOrderStatus, PaymentStatus } from "../constants";
 import paymentRepository from "../repositories/payment.repository";
 import subOrderRepository from "../repositories/subOrder.repository";
 import inventoryService from "../services/inventory.service";
+import voucherService from "../services/voucher.service";
 
 class OrderCleanupWorker {
   private readonly EXPIRATION_THRESHOLD = 1000 * 60 * 15; // 15 minutes
@@ -55,7 +56,13 @@ class OrderCleanupWorker {
               status: SubOrderStatus.CANCELLED,
             });
 
-            // 3. Update associated Payment to EXPIRED (if exists and still PENDING)
+            // 3. Rollback Voucher Usage (if any)
+            await voucherService.rollbackVoucherUsage(
+              tx,
+              subOrder.masterOrderId
+            );
+
+            // 4. Update associated Payment to EXPIRED (if exists and still PENDING)
             // Note: Each SubOrder is linked to one Payment via Allocation
             const allocations = await prisma.paymentAllocation.findMany({
               where: { subOrderId: subOrder.id },

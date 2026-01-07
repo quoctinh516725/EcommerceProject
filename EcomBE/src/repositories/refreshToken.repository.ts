@@ -1,5 +1,5 @@
-import prisma from '../config/database';
-import { RefreshToken } from '@prisma/client';
+import prisma from "../config/database";
+import { RefreshToken } from "@prisma/client";
 
 export interface CreateRefreshTokenData {
   userId: string;
@@ -66,4 +66,3 @@ class RefreshTokenRepository {
 }
 
 export default new RefreshTokenRepository();
-

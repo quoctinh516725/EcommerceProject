@@ -16,6 +16,7 @@ import roleController from "../controllers/role.controller";
 import permissionController from "../controllers/permission.controller";
 import userController from "../controllers/user.controller";
 import adminController from "../controllers/admin.controller";
+import voucherController from "../controllers/voucher.controller"; // Added
 import staffProductController from "../controllers/staff/product.controller";
 import staffShopController from "../controllers/staff/shop.controller";
 
@@ -66,22 +67,20 @@ router.use("/", productRoutes);
 // ==================== SHOP ROUTES (Aliased from Staff) ====================
 const shopRoutes = Router();
 
+shopRoutes.use(requirePermission(PermissionCode.MANAGE_SHOP_STATUS));
 shopRoutes.get(
   "/shops/pending",
   validatePagination,
-  requirePermission(PermissionCode.MANAGE_SHOP_STATUS),
   staffShopController.getPendingShops
 );
 shopRoutes.post(
   "/shops/:id/approve",
   validateUUID,
-  requirePermission(PermissionCode.MANAGE_SHOP_STATUS),
   staffShopController.reviewShopApproval
 );
 shopRoutes.patch(
   "/shops/:id/status",
   validateUUID,
-  requirePermission(PermissionCode.MANAGE_SHOP_STATUS),
   staffShopController.updateShopStatus
 );
 
@@ -111,22 +110,7 @@ roleRoutes.delete(
 
 router.use("/roles", roleRoutes);
 
-// User role assignment routes (require MANAGE_ROLES permission)
-router.post(
-  "/users/:userId/roles/:roleCode",
-  requirePermission(PermissionCode.MANAGE_ROLES),
-  roleController.assignRoleToUser
-);
-router.delete(
-  "/users/:userId/roles/:roleCode",
-  requirePermission(PermissionCode.MANAGE_ROLES),
-  roleController.removeRoleFromUser
-);
-router.get(
-  "/users/:userId/roles",
-  requirePermission(PermissionCode.MANAGE_ROLES),
-  roleController.getUserRoles
-);
+
 
 // ==================== PERMISSIONS ROUTES ====================
 // All permission management routes require MANAGE_PERMISSIONS permission
@@ -160,7 +144,33 @@ userRoutes.delete(
   requirePermission(PermissionCode.MANAGE_USER_STATUS),
   userController.deleteUser
 );
+// User role assignment routes (require MANAGE_ROLES permission)
+userRoutes.post(
+  "/:userId/roles/:roleCode",
+  requirePermission(PermissionCode.MANAGE_ROLES),
+  roleController.assignRoleToUser
+);
+userRoutes.delete(
+  "/:userId/roles/:roleCode",
+  requirePermission(PermissionCode.MANAGE_ROLES),
+  roleController.removeRoleFromUser
+);
+userRoutes.get(
+  "/:userId/roles",
+  requirePermission(PermissionCode.MANAGE_ROLES),
+  roleController.getUserRoles
+);
 
 router.use("/users", userRoutes);
+
+// ==================== VOUCHER ROUTES ====================
+// Platform voucher management requires ADMIN role
+const voucherRoutes = Router();
+voucherRoutes.use(requireRole(RoleCode.ADMIN));
+
+voucherRoutes.post("/", voucherController.createPlatformVoucher);
+voucherRoutes.get("/", voucherController.getPlatformVouchers);
+
+router.use("/vouchers", voucherRoutes);
 
 export default router;

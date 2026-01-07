@@ -1,4 +1,4 @@
-import prisma from '../config/database';
+import prisma from "../config/database";
 
 export interface CreateBrandData {
   name: string;
@@ -25,7 +25,7 @@ class BrandRepository {
 
   async findAll() {
     return prisma.brand.findMany({
-      orderBy: { name: 'asc' },
+      orderBy: { name: "asc" },
     });
   }
 

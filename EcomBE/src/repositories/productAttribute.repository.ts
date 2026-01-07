@@ -1,4 +1,4 @@
-import prisma from '../config/database';
+import prisma from "../config/database";
 
 export interface CreateProductAttributeData {
   productVariantId: string;
@@ -96,7 +96,10 @@ class ProductAttributeRepository {
       where: { id },
       data: {
         ...data,
-        attributeValueId: data.attributeValueId === undefined ? undefined : data.attributeValueId,
+        attributeValueId:
+          data.attributeValueId === undefined
+            ? undefined
+            : data.attributeValueId,
       },
     });
   }
@@ -119,4 +122,3 @@ class ProductAttributeRepository {
 }
 
 export default new ProductAttributeRepository();
-

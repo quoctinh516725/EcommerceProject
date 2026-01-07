@@ -1,7 +1,21 @@
 import prisma from "../config/database";
 
+export interface CreateRefundData {
+  subOrderId: string;
+  paymentId?: string;
+  amount: number | any;
+  reason?: string;
+  status?: string;
+}
+
+export interface UpdateRefundData {
+  status?: string;
+  reason?: string;
+  amount?: number;
+}
+
 class RefundRepository {
-  async create(tx: any, data: any) {
+  async create(tx: any, data: CreateRefundData) {
     return (tx as any).refund.create({ data });
   }
 
@@ -22,7 +36,7 @@ class RefundRepository {
     });
   }
 
-  async update(tx: any, id: string, data: any) {
+  async update(tx: any, id: string, data: UpdateRefundData) {
     const client = tx || prisma;
     return (client as any).refund.update({
       where: { id },

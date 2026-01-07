@@ -12,6 +12,7 @@ import { validatePagination } from "../validators/public.validator";
 import shopController from "../controllers/seller/shop.controller";
 import productController from "../controllers/seller/product.controller";
 import refundController from "../controllers/refund.controller";
+import voucherController from "../controllers/voucher.controller";
 
 const router = Router();
 
@@ -86,6 +87,20 @@ router.patch(
   requirePermission(PermissionCode.UPDATE_ORDER),
   requireShop,
   refundController.handleRefundRequest
+);
+
+// ==================== VOUCHER ROUTES ====================
+router.post(
+  "/vouchers",
+  requirePermission(PermissionCode.CREATE_PRODUCT),
+  requireShop,
+  voucherController.createShopVoucher
+);
+router.get(
+  "/vouchers",
+  requirePermission(PermissionCode.VIEW_PRODUCT),
+  requireShop,
+  voucherController.getShopVouchers
 );
 
 export default router;

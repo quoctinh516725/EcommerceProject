@@ -1,4 +1,4 @@
-import prisma from '../config/database';
+import prisma from "../config/database";
 
 export interface CreateAttributeValueData {
   attributeId: string;
@@ -28,7 +28,7 @@ class AttributeValueRepository {
   async findByAttributeId(attributeId: string) {
     return prisma.attributeValue.findMany({
       where: { attributeId },
-      orderBy: { value: 'asc' },
+      orderBy: { value: "asc" },
     });
   }
 
@@ -79,4 +79,3 @@ class AttributeValueRepository {
 }
 
 export default new AttributeValueRepository();
-

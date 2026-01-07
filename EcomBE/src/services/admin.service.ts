@@ -8,6 +8,35 @@ import { AuditAction, AuditResource } from "../constants";
 import { NotFoundError } from "../errors/AppError";
 
 class AdminService {
+  private cache: Map<string, string> = new Map();
+  private cacheExpiry: Map<string, number> = new Map();
+  private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+  /**
+   * Get a system setting value by key with in-memory cache
+   */
+  async getSetting(key: string, defaultValue?: string): Promise<string | null> {
+    // Check cache first
+    const cachedValue = this.cache.get(key);
+    const expiry = this.cacheExpiry.get(key);
+
+    if (cachedValue !== undefined && expiry && Date.now() < expiry) {
+      return cachedValue;
+    }
+
+    // Fetch from database using repository
+    const setting = await systemSettingRepository.getByKey(key);
+    const value = setting?.value ?? defaultValue ?? null;
+
+    // Update cache
+    if (value !== null) {
+      this.cache.set(key, value);
+      this.cacheExpiry.set(key, Date.now() + this.CACHE_TTL);
+    }
+
+    return value;
+  }
+
   /**
    * Get all system settings
    */
@@ -21,6 +50,10 @@ class AdminService {
   async updateSystemSetting(adminId: string, data: SystemSettingData) {
     const oldValue = await systemSettingRepository.getByKey(data.key);
     const setting = await systemSettingRepository.upsert(data);
+
+    // Invalidate cache
+    this.cache.delete(data.key);
+    this.cacheExpiry.delete(data.key);
 
     // Log action
     await auditLogRepository.create({
@@ -47,6 +80,10 @@ class AdminService {
     }
 
     await systemSettingRepository.deleteByKey(key);
+
+    // Invalidate cache
+    this.cache.delete(key);
+    this.cacheExpiry.delete(key);
 
     // Log action
     await auditLogRepository.create({

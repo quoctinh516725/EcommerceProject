@@ -1,4 +1,4 @@
-import prisma from '../config/database';
+import prisma from "../config/database";
 
 export interface CreateCategoryAttributeData {
   categoryId: string;
@@ -105,4 +105,3 @@ class CategoryAttributeRepository {
 }
 
 export default new CategoryAttributeRepository();
-

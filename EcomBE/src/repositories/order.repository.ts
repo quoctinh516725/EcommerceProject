@@ -1,11 +1,31 @@
 import prisma from "../config/database";
 
+export interface CreateOrderData {
+  userId: string;
+  orderCode: string;
+  originalTotalAmount?: number;
+  totalAmount?: number;
+  platformDiscount?: number;
+  status?: string;
+  receiverName: string;
+  receiverPhone: string;
+  shippingAddress: string;
+  paymentMethod: string;
+}
+
+export interface UpdateOrderData {
+  originalTotalAmount?: number;
+  totalAmountAtBuy?: number;
+  platformDiscount?: number;
+  status?: string;
+}
+
 class OrderRepository {
-  async create(tx: any, data: any) {
+  async create(tx: any, data: CreateOrderData) {
     return (tx as any).masterOrder.create({ data });
   }
 
-  async update(tx: any, id: string, data: any) {
+  async update(tx: any, id: string, data: UpdateOrderData) {
     return (tx as any).masterOrder.update({
       where: { id },
       data,
