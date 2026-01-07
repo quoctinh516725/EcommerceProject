@@ -1,4 +1,4 @@
-import prisma from '../config/database';
+import prisma from "../config/database";
 
 export interface CreateUserAddressData {
   userId: string;
@@ -33,8 +33,8 @@ class UserAddressRepository {
     return prisma.userAddress.findMany({
       where: { userId },
       orderBy: [
-        { isDefault: 'desc' }, // Default address first
-        { createdAt: 'desc' },
+        { isDefault: "desc" }, // Default address first
+        { createdAt: "desc" },
       ],
     });
   }
@@ -123,5 +123,3 @@ class UserAddressRepository {
 }
 
 export default new UserAddressRepository();
-
-

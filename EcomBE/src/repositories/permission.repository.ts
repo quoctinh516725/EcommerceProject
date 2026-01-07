@@ -1,5 +1,5 @@
-import prisma from '../config/database';
-import { Permission } from '@prisma/client';
+import prisma from "../config/database";
+import { Permission } from "@prisma/client";
 
 export interface CreatePermissionData {
   code: string;
@@ -41,7 +41,7 @@ class PermissionRepository {
    */
   async findAll(): Promise<Permission[]> {
     return prisma.permission.findMany({
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
   }
 
@@ -89,6 +89,3 @@ class PermissionRepository {
 }
 
 export default new PermissionRepository();
-
-
-

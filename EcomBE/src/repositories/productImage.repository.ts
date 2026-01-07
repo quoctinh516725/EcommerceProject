@@ -1,4 +1,4 @@
-import prisma from '../config/database';
+import prisma from "../config/database";
 
 export interface CreateProductImageData {
   productId: string;
@@ -25,7 +25,7 @@ class ProductImageRepository {
   async findByProductId(productId: string) {
     return prisma.productImage.findMany({
       where: { productId },
-      orderBy: { sortOrder: 'asc' },
+      orderBy: { sortOrder: "asc" },
     });
   }
 
@@ -83,4 +83,3 @@ class ProductImageRepository {
 }
 
 export default new ProductImageRepository();
-

@@ -2,13 +2,13 @@ import prisma from "../config/database";
 
 class ShippingRuleRepository {
   async findByShopIds(shopIds: string[]) {
-    return (prisma as any).shopShippingRule.findMany({
+    return prisma.shopShippingRule.findMany({
       where: { shopId: { in: shopIds } },
     });
   }
 
   async findByShopId(shopId: string) {
-    return (prisma as any).shopShippingRule.findUnique({
+    return prisma.shopShippingRule.findUnique({
       where: { shopId },
     });
   }

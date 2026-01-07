@@ -1,6 +1,6 @@
-import prisma from '../config/database';
-import { Role } from '@prisma/client';
-import { RoleStatus } from '../constants';
+import prisma from "../config/database";
+import { Role } from "@prisma/client";
+import { RoleStatus } from "../constants";
 
 export interface CreateRoleData {
   code: string;
@@ -48,7 +48,7 @@ class RoleRepository {
     const where = status ? { status } : {};
     return prisma.role.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
   }
 
@@ -58,7 +58,7 @@ class RoleRepository {
   async findActiveRoles(): Promise<Role[]> {
     return prisma.role.findMany({
       where: { status: RoleStatus.ACTIVE },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
   }
 
@@ -109,6 +109,3 @@ class RoleRepository {
 }
 
 export default new RoleRepository();
-
-
-

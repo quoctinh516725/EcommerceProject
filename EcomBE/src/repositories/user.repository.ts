@@ -1,6 +1,6 @@
-import prisma from '../config/database';
-import { User } from '@prisma/client';
-import { UserStatus } from '../constants';
+import prisma from "../config/database";
+import { User } from "@prisma/client";
+import { UserStatus } from "../constants";
 
 export interface CreateUserData {
   username: string;
@@ -45,10 +45,7 @@ class UserRepository {
   async findByEmailOrUsername(emailOrUsername: string): Promise<User | null> {
     return prisma.user.findFirst({
       where: {
-        OR: [
-          { email: emailOrUsername },
-          { username: emailOrUsername },
-        ],
+        OR: [{ email: emailOrUsername }, { username: emailOrUsername }],
       },
     });
   }
@@ -134,7 +131,7 @@ class UserRepository {
           createdAt: true,
           updatedAt: true,
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip,
         take: limit,
       }),
@@ -149,4 +146,3 @@ class UserRepository {
 }
 
 export default new UserRepository();
-

@@ -1,6 +1,6 @@
-import prisma from '../config/database';
-import { Prisma } from '@prisma/client';
-import { ProductStatus } from '../constants';
+import prisma from "../config/database";
+import { Prisma } from "@prisma/client";
+import { ProductStatus } from "../constants";
 
 export interface CreateProductData {
   shopId: string;
@@ -86,12 +86,17 @@ class ProductRepository {
   /**
    * Find products by shop ID with pagination
    */
-  async findByShopId(shopId: string, status?: string, page?: number, limit?: number) {
+  async findByShopId(
+    shopId: string,
+    status?: string,
+    page?: number,
+    limit?: number
+  ) {
     const where: any = { shopId };
     if (status) {
       where.status = status;
     }
-    
+
     const skip = page && limit ? (page - 1) * limit : undefined;
     const take = limit;
 
@@ -103,7 +108,7 @@ class ProductRepository {
           variants: true,
           tags: true,
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip,
         take,
       }),
@@ -116,12 +121,17 @@ class ProductRepository {
   /**
    * Find products by category ID with pagination
    */
-  async findByCategoryId(categoryId: string, status?: string, page?: number, limit?: number) {
+  async findByCategoryId(
+    categoryId: string,
+    status?: string,
+    page?: number,
+    limit?: number
+  ) {
     const where: any = { categoryId };
     if (status) {
       where.status = status;
     }
-    
+
     const skip = page && limit ? (page - 1) * limit : undefined;
     const take = limit;
 
@@ -132,7 +142,7 @@ class ProductRepository {
           images: true,
           variants: true,
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip,
         take,
       }),
@@ -145,12 +155,17 @@ class ProductRepository {
   /**
    * Find products by brand ID with pagination
    */
-  async findByBrandId(brandId: string, status?: string, page?: number, limit?: number) {
+  async findByBrandId(
+    brandId: string,
+    status?: string,
+    page?: number,
+    limit?: number
+  ) {
     const where: any = { brandId };
     if (status) {
       where.status = status;
     }
-    
+
     const skip = page && limit ? (page - 1) * limit : undefined;
     const take = limit;
 
@@ -161,7 +176,7 @@ class ProductRepository {
           images: true,
           variants: true,
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip,
         take,
       }),
@@ -179,7 +194,7 @@ class ProductRepository {
     if (status) {
       where.status = status;
     }
-    
+
     const skip = page && limit ? (page - 1) * limit : undefined;
     const take = limit;
 
@@ -211,7 +226,7 @@ class ProductRepository {
             },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip,
         take,
       }),
@@ -270,7 +285,7 @@ class ProductRepository {
             },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip,
         take: limit,
       }),
@@ -293,7 +308,7 @@ class ProductRepository {
         images: true,
         variants: true,
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
   }
 

@@ -1,5 +1,5 @@
-import prisma from '../config/database';
-import { RoleStatus } from '../constants';
+import prisma from "../config/database";
+import { RoleStatus } from "../constants";
 
 class UserRoleRepository {
   /**
@@ -116,7 +116,7 @@ class UserRoleRepository {
 
     // Collect all unique permissions
     const permissionMap = new Map<string, any>();
-    
+
     userRoles.forEach((userRole: any) => {
       userRole.role.rolePermissions.forEach((rp: any) => {
         if (!permissionMap.has(rp.permission.id)) {
@@ -131,7 +131,10 @@ class UserRoleRepository {
   /**
    * Check if user has a specific permission
    */
-  async hasPermission(userId: string, permissionCode: string): Promise<boolean> {
+  async hasPermission(
+    userId: string,
+    permissionCode: string
+  ): Promise<boolean> {
     const userRole = await prisma.userRole.findFirst({
       where: {
         userId,
@@ -162,4 +165,3 @@ class UserRoleRepository {
 }
 
 export default new UserRoleRepository();
-

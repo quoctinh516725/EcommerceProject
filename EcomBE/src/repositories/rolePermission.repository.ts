@@ -1,5 +1,5 @@
-import prisma from '../config/database';
-import { RoleStatus } from '../constants';
+import prisma from "../config/database";
+import { RoleStatus } from "../constants";
 
 class RolePermissionRepository {
   /**
@@ -31,7 +31,10 @@ class RolePermissionRepository {
   /**
    * Remove permission from role
    */
-  async removePermissionFromRole(roleId: string, permissionId: string): Promise<void> {
+  async removePermissionFromRole(
+    roleId: string,
+    permissionId: string
+  ): Promise<void> {
     await prisma.rolePermission.deleteMany({
       where: {
         roleId,
@@ -57,7 +60,10 @@ class RolePermissionRepository {
   /**
    * Check if role has a specific permission
    */
-  async hasPermission(roleId: string, permissionCode: string): Promise<boolean> {
+  async hasPermission(
+    roleId: string,
+    permissionCode: string
+  ): Promise<boolean> {
     const rolePermission = await prisma.rolePermission.findFirst({
       where: {
         roleId,
@@ -79,7 +85,10 @@ class RolePermissionRepository {
     });
   }
 
-  async hasPermissionByRoleCodes(roleCodes: string[], permissionCode: string): Promise<boolean> {
+  async hasPermissionByRoleCodes(
+    roleCodes: string[],
+    permissionCode: string
+  ): Promise<boolean> {
     if (roleCodes.length === 0) {
       return false;
     }
@@ -104,4 +113,3 @@ class RolePermissionRepository {
 }
 
 export default new RolePermissionRepository();
-

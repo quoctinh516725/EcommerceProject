@@ -9,6 +9,10 @@ import orderRepository from "../repositories/order.repository";
 import subOrderRepository from "../repositories/subOrder.repository";
 import paymentRepository from "../repositories/payment.repository";
 import shippingRuleRepository from "../repositories/shippingRule.repository";
+import voucherService from "./voucher.service";
+import adminService from "./admin.service";
+import shopRepository from "../repositories/shop.repository";
+import { DEFAULT_COMMISSION_RATE } from "../constants/system";
 
 class OrderService {
   /**
@@ -31,6 +35,7 @@ class OrderService {
       receiverPhone: string;
       shippingAddress: string;
       paymentMethod: string;
+      voucherCode?: string;
     }
   ) {
     if (!checkoutData.items || checkoutData.items.length === 0) {
@@ -91,22 +96,56 @@ class OrderService {
         receiverName: checkoutData.receiverName,
         receiverPhone: checkoutData.receiverPhone,
         shippingAddress: checkoutData.shippingAddress,
+        paymentMethod: checkoutData.paymentMethod,
       });
 
       const subOrdersInfo = [];
       let totalMasterAmount = 0;
+      let totalPlatformDiscount = 0;
+      let originalTotalAccumulator = 0; // Sum of (items + shipping - shop_discount)
 
+      // Validate voucher if provided
+      let voucherValidation: any = null;
+      if (checkoutData.voucherCode) {
+        const masterTotal = orderItemsEnriched.reduce(
+          (sum: number, item: any) => sum + Number(item.price) * item.quantity,
+          0
+        );
+        voucherValidation = await voucherService.validateAndCalculate(
+          checkoutData.voucherCode,
+          userId,
+          masterTotal
+        );
+
+        if (!voucherValidation.isValid) {
+          throw new AppError(
+            voucherValidation.error || "Mã voucher không hợp lệ",
+            400
+          );
+        }
+      }
+
+      // Get default commission rate
+      const defaultCommissionRateValue = (await adminService.getSetting(
+        "DEFAULT_COMMISSION_RATE",
+        DEFAULT_COMMISSION_RATE.toString()
+      )) as string;
+      const defaultCommissionRate = parseFloat(defaultCommissionRateValue);
+      const masterItemsTotal = orderItemsEnriched.reduce(
+        (sum: number, item: any) => sum + Number(item.price) * item.quantity,
+        0
+      );
       // c. Create Sub-Orders for each Shop
       for (const [shopId, items] of shopGroups) {
         const subOrderCode = this.generateOrderCode("SUB");
 
         const itemsTotal = items.reduce(
-          (sum, item) => sum + Number(item.price) * item.quantity,
+          (sum: number, item: any) => sum + Number(item.price) * item.quantity,
           0
         );
 
         // Fetch dynamic shipping fee
-        const rule : any = rulesMap.get(shopId);
+        const rule: any = rulesMap.get(shopId);
         if (!rule) {
           throw new AppError("Shop chưa cấu hình phí vận chuyển", 400);
         }
@@ -117,7 +156,47 @@ class OrderService {
           subtotal: itemsTotal,
         });
 
-        const subOrderTotal = itemsTotal + shopShippingFee;
+        // Calculate shop-specific discount (if voucher is SHOP type)
+        let totalShopDiscount = 0;
+        if (
+          voucherValidation?.isValid &&
+          voucherValidation.voucher.type === "SHOP" &&
+          voucherValidation.voucher.shopId === shopId
+        ) {
+          totalShopDiscount += voucherValidation.discountAmount;
+        }
+
+        // Calculate platform discount allocation (if voucher is PLATFORM type)
+        let platformDiscountShare = 0;
+        if (
+          voucherValidation?.isValid &&
+          voucherValidation.voucher.type === "PLATFORM"
+        ) {
+          platformDiscountShare =
+            (itemsTotal / masterItemsTotal) * voucherValidation.discountAmount;
+          totalPlatformDiscount += platformDiscountShare;
+        }
+
+        const subTotalDiscount = totalShopDiscount + platformDiscountShare;
+
+        // Get commission rate (shop-specific or default)
+        const shop = await shopRepository.findById(shopId);
+        const commissionRate = shop?.commissionRate
+          ? Number(shop.commissionRate)
+          : defaultCommissionRate;
+
+        // 1. Calculate Commission based on price AFTER SHOP DISCOUNT (Fairer for shop)
+        const itemsTotalAfterShopDiscount = itemsTotal - totalShopDiscount;
+        const commissionAmount = itemsTotalAfterShopDiscount * commissionRate;
+
+        // 2. Calculate Real Amount (Shop Net)
+        // Note: Shop SHOULD NOT bear the platform discount. Platform covers it.
+        const realAmount =
+          itemsTotalAfterShopDiscount - commissionAmount + shopShippingFee;
+
+        // 3. User Pays (SubTotal)
+        const subOrderTotal =
+          itemsTotalAfterShopDiscount + shopShippingFee - platformDiscountShare;
 
         const subOrder = await subOrderRepository.create(tx, {
           masterOrderId: masterOrder.id,
@@ -125,6 +204,9 @@ class OrderService {
           subOrderCode,
           itemsTotal,
           shippingFee: shopShippingFee,
+          discountAmount: subTotalDiscount,
+          commissionAmount,
+          realAmount,
           totalAmount: subOrderTotal,
           status: SubOrderStatus.PENDING_PAYMENT,
           orderItems: {
@@ -142,6 +224,7 @@ class OrderService {
 
         subOrdersInfo.push(subOrder);
         totalMasterAmount += subOrderTotal;
+        originalTotalAccumulator += itemsTotal + shopShippingFee;
       }
 
       // d. Create Payment record (PENDING)
@@ -162,10 +245,23 @@ class OrderService {
         });
       }
 
-      // f. Finalize Master Order Amount
+      // f. Finalize Master Order Amounts
       await orderRepository.update(tx, masterOrder.id, {
-        originalTotalAmount: totalMasterAmount,
+        originalTotalAmount: originalTotalAccumulator,
+        platformDiscount: totalPlatformDiscount,
+        totalAmountAtBuy: totalMasterAmount,
       });
+
+      // g. Record voucher usage if applicable
+      if (voucherValidation?.isValid) {
+        await voucherService.applyVoucher(
+          tx,
+          voucherValidation.voucher.id,
+          userId,
+          masterOrder.id,
+          voucherValidation.discountAmount
+        );
+      }
 
       return {
         masterOrderId: masterOrder.id,

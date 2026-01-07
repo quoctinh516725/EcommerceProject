@@ -1,25 +1,25 @@
-import bcrypt from 'bcrypt';
-import { UserStatus, RoleCode } from '../constants';
-import userRepository from '../repositories/user.repository';
-import refreshTokenRepository from '../repositories/refreshToken.repository';
-import roleRepository from '../repositories/role.repository';
-import userRoleRepository from '../repositories/userRole.repository';
+import bcrypt from "bcrypt";
+import { UserStatus, RoleCode } from "../constants";
+import userRepository from "../repositories/user.repository";
+import refreshTokenRepository from "../repositories/refreshToken.repository";
+import roleRepository from "../repositories/role.repository";
+import userRoleRepository from "../repositories/userRole.repository";
 import {
   generateAccessToken,
   generateRefreshToken,
   verifyRefreshToken,
   getTokenRemainingTime,
   decodeToken,
-} from '../utils/jwt';
-import { addToBlacklist } from '../utils/blacklist';
-import { saveUserCache, deleteUserCache } from '../utils/userCache';
+} from "../utils/jwt";
+import { addToBlacklist } from "../utils/blacklist";
+import { saveUserCache, deleteUserCache } from "../utils/userCache";
 import {
   ConflictError,
   UnauthorizedError,
   NotFoundError,
-} from '../errors/AppError';
-import shopRepository from '../repositories/shop.repository';
-import { env } from '../config/env';
+} from "../errors/AppError";
+import shopRepository from "../repositories/shop.repository";
+import { env } from "../config/env";
 
 export interface RegisterInput {
   email: string;
@@ -55,13 +55,13 @@ class AuthService {
     // Check if email already exists
     const emailExists = await userRepository.emailExists(input.email);
     if (emailExists) {
-      throw new ConflictError('Email already exists');
+      throw new ConflictError("Email already exists");
     }
 
     // Check if username already exists
     const usernameExists = await userRepository.usernameExists(input.username);
     if (usernameExists) {
-      throw new ConflictError('Username already exists');
+      throw new ConflictError("Username already exists");
     }
 
     // Hash password
@@ -76,7 +76,7 @@ class AuthService {
       fullName: input.fullName,
     });
 
-    let roleCodes =[RoleCode.USER];
+    let roleCodes = [RoleCode.USER];
 
     // Assign default USER role
     try {
@@ -86,8 +86,8 @@ class AuthService {
       }
     } catch (error) {
       // Ignore if role not found (will be assigned later via seed)
-      roleCodes =[]
-      console.warn('Could not assign USER role to new user:', error);
+      roleCodes = [];
+      console.warn("Could not assign USER role to new user:", error);
     }
 
     // Generate tokens
@@ -102,7 +102,9 @@ class AuthService {
 
     // Calculate refresh token expiration (7 days from now)
     const refreshTokenExpiry = new Date();
-    refreshTokenExpiry.setDate(refreshTokenExpiry.getDate() + parseInt(env.JWT_REFRESH_EXPIRES_IN || '7'));
+    refreshTokenExpiry.setDate(
+      refreshTokenExpiry.getDate() + parseInt(env.JWT_REFRESH_EXPIRES_IN || "7")
+    );
 
     // Save refresh token to database
     await refreshTokenRepository.create({
@@ -142,20 +144,22 @@ class AuthService {
    */
   async login(input: LoginInput): Promise<AuthResponse> {
     // Find user by email or username
-    const user = await userRepository.findByEmailOrUsername(input.emailOrUsername);
+    const user = await userRepository.findByEmailOrUsername(
+      input.emailOrUsername
+    );
     if (!user) {
-      throw new UnauthorizedError('Invalid credentials');
+      throw new UnauthorizedError("Invalid credentials");
     }
 
     // Check if user is active
     if (user.status !== UserStatus.ACTIVE) {
-      throw new UnauthorizedError('Account is inactive');
+      throw new UnauthorizedError("Account is inactive");
     }
 
     // Verify password
     const isPasswordValid = await bcrypt.compare(input.password, user.password);
     if (!isPasswordValid) {
-      throw new UnauthorizedError('Invalid credentials');
+      throw new UnauthorizedError("Invalid credentials");
     }
 
     // Update last login
@@ -190,7 +194,9 @@ class AuthService {
 
     // Calculate refresh token expiration (7 days from now)
     const refreshTokenExpiry = new Date();
-    refreshTokenExpiry.setDate(refreshTokenExpiry.getDate() + parseInt(env.JWT_REFRESH_EXPIRES_IN!));
+    refreshTokenExpiry.setDate(
+      refreshTokenExpiry.getDate() + parseInt(env.JWT_REFRESH_EXPIRES_IN!)
+    );
 
     // Save refresh token to database
     await refreshTokenRepository.create({
@@ -228,39 +234,42 @@ class AuthService {
   /**
    * Refresh access token
    */
-  async refreshToken(refreshTokenString: string): Promise<{ accessToken: string }> {
+  async refreshToken(
+    refreshTokenString: string
+  ): Promise<{ accessToken: string }> {
     // Verify refresh token
     try {
       verifyRefreshToken(refreshTokenString);
     } catch (error) {
-      throw new UnauthorizedError('Invalid refresh token');
+      throw new UnauthorizedError("Invalid refresh token");
     }
 
     // Find refresh token in database
-    const refreshToken = await refreshTokenRepository.findByToken(refreshTokenString);
+    const refreshToken =
+      await refreshTokenRepository.findByToken(refreshTokenString);
     if (!refreshToken) {
-      throw new UnauthorizedError('Refresh token not found');
+      throw new UnauthorizedError("Refresh token not found");
     }
 
     // Check if token is revoked
     if (refreshToken.revoked) {
-      throw new UnauthorizedError('Refresh token has been revoked');
+      throw new UnauthorizedError("Refresh token has been revoked");
     }
 
     // Check if token is expired
     if (refreshToken.expiredAt < new Date()) {
-      throw new UnauthorizedError('Refresh token has expired');
+      throw new UnauthorizedError("Refresh token has expired");
     }
 
     // Get user
     const user = await userRepository.findById(refreshToken.userId);
     if (!user) {
-      throw new NotFoundError('User not found');
+      throw new NotFoundError("User not found");
     }
 
     // Check if user is active
     if (user.status !== UserStatus.ACTIVE) {
-      throw new UnauthorizedError('Account is inactive');
+      throw new UnauthorizedError("Account is inactive");
     }
 
     // Get user roles for token
@@ -302,11 +311,15 @@ class AuthService {
   /**
    * Logout user (revoke refresh token and blacklist access token)
    */
-  async logout(refreshTokenString: string, accessToken?: string): Promise<void> {
+  async logout(
+    refreshTokenString: string,
+    accessToken?: string
+  ): Promise<void> {
     // Revoke refresh token
     let userId: string | null = null;
     try {
-      const refreshToken = await refreshTokenRepository.findByToken(refreshTokenString);
+      const refreshToken =
+        await refreshTokenRepository.findByToken(refreshTokenString);
       if (refreshToken && !refreshToken.revoked) {
         userId = refreshToken.userId;
         await refreshTokenRepository.revoke(refreshTokenString);

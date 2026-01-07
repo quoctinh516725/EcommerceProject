@@ -1,9 +1,13 @@
-import userRepository from '../repositories/user.repository';
-import userRoleRepository from '../repositories/userRole.repository';
-import { NotFoundError, ConflictError, ValidationError } from '../errors/AppError';
-import { UserStatus } from '../constants';
-import prisma from '../config/database';
-import { deleteUserCache } from '../utils/userCache';
+import userRepository from "../repositories/user.repository";
+import userRoleRepository from "../repositories/userRole.repository";
+import {
+  NotFoundError,
+  ConflictError,
+  ValidationError,
+} from "../errors/AppError";
+import { UserStatus } from "../constants";
+import prisma from "../config/database";
+import { deleteUserCache } from "../utils/userCache";
 
 export interface UpdateUserProfileInput {
   fullName?: string;
@@ -30,7 +34,7 @@ class UserService {
   async getCurrentUserProfile(userId: string) {
     const user = await userRepository.findById(userId);
     if (!user) {
-      throw new NotFoundError('User not found');
+      throw new NotFoundError("User not found");
     }
 
     // Get user roles
@@ -60,23 +64,26 @@ class UserService {
   /**
    * Update current user profile
    */
-  async updateCurrentUserProfile(userId: string, input: UpdateUserProfileInput) {
+  async updateCurrentUserProfile(
+    userId: string,
+    input: UpdateUserProfileInput
+  ) {
     const user = await userRepository.findById(userId);
     if (!user) {
-      throw new NotFoundError('User not found');
+      throw new NotFoundError("User not found");
     }
 
     // Validate phone if provided
     if (input.phone) {
       const phoneRegex = /^[0-9]{10,11}$/;
       if (!phoneRegex.test(input.phone)) {
-        throw new ValidationError('Invalid phone format');
+        throw new ValidationError("Invalid phone format");
       }
 
       // Check if phone is already used by another user
       const existingUser = await userRepository.findByEmail(input.phone);
       if (existingUser && existingUser.id !== userId) {
-        throw new ConflictError('Phone number already exists');
+        throw new ConflictError("Phone number already exists");
       }
     }
 
@@ -94,7 +101,7 @@ class UserService {
   async updateUserAvatar(userId: string, avatarUrl: string) {
     const user = await userRepository.findById(userId);
     if (!user) {
-      throw new NotFoundError('User not found');
+      throw new NotFoundError("User not found");
     }
 
     return userRepository.update(userId, {
@@ -108,7 +115,7 @@ class UserService {
   async getUserById(userId: string) {
     const user = await userRepository.findById(userId);
     if (!user) {
-      throw new NotFoundError('User not found');
+      throw new NotFoundError("User not found");
     }
 
     // Get user roles
@@ -141,9 +148,9 @@ class UserService {
 
     if (query.search) {
       where.OR = [
-        { email: { contains: query.search, mode: 'insensitive' } },
-        { username: { contains: query.search, mode: 'insensitive' } },
-        { fullName: { contains: query.search, mode: 'insensitive' } },
+        { email: { contains: query.search, mode: "insensitive" } },
+        { username: { contains: query.search, mode: "insensitive" } },
+        { fullName: { contains: query.search, mode: "insensitive" } },
       ];
     }
 
@@ -152,7 +159,7 @@ class UserService {
         where,
         skip,
         take: limit,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         select: {
           id: true,
           username: true,
@@ -188,7 +195,7 @@ class UserService {
   async updateUserStatus(userId: string, input: UpdateUserStatusInput) {
     const user = await userRepository.findById(userId);
     if (!user) {
-      throw new NotFoundError('User not found');
+      throw new NotFoundError("User not found");
     }
 
     const updatedUser = await userRepository.update(userId, {
@@ -207,7 +214,7 @@ class UserService {
   async deleteUser(userId: string) {
     const user = await userRepository.findById(userId);
     if (!user) {
-      throw new NotFoundError('User not found');
+      throw new NotFoundError("User not found");
     }
 
     const updatedUser = await userRepository.update(userId, {
@@ -222,5 +229,3 @@ class UserService {
 }
 
 export default new UserService();
-
-

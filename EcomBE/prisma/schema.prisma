@@ -134,6 +134,7 @@ model Shop {
   totalProducts Int     @default(0) @map("total_products")
   totalOrders   Int     @default(0) @map("total_orders")
   status       String   @default("ACTIVE")
+  commissionRate Decimal? @map("commission_rate") @db.Decimal(5, 4)
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
@@ -141,6 +142,7 @@ model Shop {
   products Product[]
   subOrders SubOrder[]
   shippingRule ShopShippingRule?
+  vouchers Voucher[]
 
   @@map("shops")
 }
@@ -342,7 +344,8 @@ model MasterOrder {
   
   // Display Data
   originalTotalAmount     Decimal  @map("original_total_amount") @db.Decimal(12, 2)
-  platformDiscount Decimal @default(0) @map("platform_discount") @db.Decimal(12, 2)
+  platformDiscount        Decimal  @default(0) @map("platform_discount") @db.Decimal(12, 2)
+  totalAmountAtBuy             Decimal  @default(0) @map("total_amount") @db.Decimal(12, 2)
   
   // Info
   receiverName    String   @map("receiver_name")
@@ -370,6 +373,8 @@ model SubOrder {
   itemsTotal        Decimal  @map("items_total") @db.Decimal(12, 2) // Sum of items
   shippingFee       Decimal  @default(0) @map("shipping_fee") @db.Decimal(12, 2) // Shop specific shipping
   discountAmount    Decimal  @default(0) @map("discount_amount") @db.Decimal(12, 2) // Shop voucher
+  commissionAmount  Decimal  @default(0) @map("commission_amount") @db.Decimal(12, 2) // Platform commission
+  realAmount        Decimal  @default(0) @map("real_amount") @db.Decimal(12, 2) // Actual shop revenue
   totalAmount       Decimal  @map("total_amount") @db.Decimal(12, 2) // (items + ship - disc)
   
   // Status State Machine
@@ -481,4 +486,51 @@ model ShopShippingRule {
   shop         Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
 
   @@map("shop_shipping_rules")
+}
+
+model Voucher {
+  id                String    @id @default(uuid())
+  code              String    @unique
+  name              String
+  description       String?
+  
+  type              String    // PLATFORM or SHOP
+  shopId            String?   @map("shop_id")
+  
+  discountType      String    @map("discount_type") // PERCENT or FIXED
+  discountValue     Decimal   @map("discount_value") @db.Decimal(12, 2)
+  minOrderValue     Decimal?  @map("min_order_value") @db.Decimal(12, 2)
+  maxDiscountAmount Decimal?  @map("max_discount_amount") @db.Decimal(12, 2)
+  
+  usageLimit        Int       @map("usage_limit")
+  usageCount        Int       @default(0) @map("usage_count")
+  perUserLimit      Int       @default(1) @map("per_user_limit")
+  
+  startDate         DateTime  @map("start_date")
+  endDate           DateTime  @map("end_date")
+  
+  status            String    @default("ACTIVE")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  
+  shop              Shop?     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  usages            VoucherUsage[]
+  
+  @@map("vouchers")
+}
+
+model VoucherUsage {
+  id              String   @id @default(uuid())
+  voucherId       String   @map("voucher_id")
+  userId          String   @map("user_id")
+  masterOrderId   String   @map("master_order_id")
+  
+  discountApplied Decimal  @map("discount_applied") @db.Decimal(12, 2)
+  
+  createdAt       DateTime @default(now()) @map("created_at")
+  
+  voucher         Voucher  @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+  
+  @@map("voucher_usages")
+  @@unique([voucherId, masterOrderId])
 }
