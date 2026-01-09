@@ -18,6 +18,8 @@ import orderRoutes from "./routes/order.routes";
 import subOrderRoutes from "./routes/subOrder.routes";
 import paymentRoutes from "./routes/payment.routes";
 
+import reviewRoutes from "./routes/review.route";
+
 const app = express();
 
 /** ---------------------------
@@ -29,7 +31,9 @@ app.use(
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
       if (env.NODE_ENV === "production") {
-        const allowed = process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : [];
+        const allowed = process.env.FRONTEND_URL
+          ? [process.env.FRONTEND_URL]
+          : [];
         if (allowed.includes(origin)) return callback(null, true);
         return callback(null, false);
       }
@@ -52,13 +56,20 @@ const authLimiter = rateLimit({
   max: 100,
   message: "Too many requests, try again later.",
 });
-app.use(["/api/auth", "/api/admin", "/api/profile", "/api/seller", "/api/staff"], authLimiter);
+app.use(
+  ["/api/auth", "/api/admin", "/api/profile", "/api/seller", "/api/staff"],
+  authLimiter
+);
 
 /** ---------------------------
  *  3. Health check
  * --------------------------- */
 app.get("/health", (_req, res) =>
-  res.json({ success: true, message: "Server is running", timestamp: new Date().toISOString() })
+  res.json({
+    success: true,
+    message: "Server is running",
+    timestamp: new Date().toISOString(),
+  })
 );
 
 /** ---------------------------
@@ -77,6 +88,7 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/sub-orders", subOrderRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/cart", cartRoutes);
+app.use("/api/reviews", reviewRoutes);
 
 /** ---------------------------
  *  5. Error handling
