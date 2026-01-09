@@ -1,11 +1,19 @@
+import http from "http";
 import app from "./app";
 import { env } from "./config/env";
 import prisma from "./config/database";
 import redis from "./config/redis";
 import cartSyncWorker from "./workers/cartSync.worker";
 import orderCleanupWorker from "./workers/orderCleanup.worker";
+import { socketService } from "./socket";
 
 const PORT = env.PORT;
+
+// Create HTTP server
+const server = http.createServer(app);
+
+// Initialize Socket.IO
+socketService.init(server);
 
 // Graceful shutdown
 const gracefulShutdown = async () => {
@@ -23,7 +31,7 @@ const gracefulShutdown = async () => {
 };
 
 // Start server
-const server = app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
   console.log(`Environment: ${env.NODE_ENV}`);
 

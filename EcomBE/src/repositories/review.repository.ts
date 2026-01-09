@@ -1,7 +1,4 @@
-import { exec } from "child_process";
 import prisma from "../config/database";
-import { Prisma } from "@prisma/client";
-
 export interface ProductReviewData {
   productId: string;
   orderItemId: string;
@@ -59,7 +56,7 @@ export class ReviewRepository {
     }
 
     const [reviews, total] = await Promise.all([
-      (prisma as any).productReview.findMany({
+      prisma.productReview.findMany({
         where,
         include: {
           user: {
@@ -79,7 +76,7 @@ export class ReviewRepository {
         take: limit,
         orderBy: { createdAt: "desc" },
       }),
-      (prisma as any).productReview.count({ where }),
+      prisma.productReview.count({ where }),
     ]);
 
     return { reviews, total };
@@ -102,7 +99,7 @@ export class ReviewRepository {
     }
 
     const [reviews, total] = await Promise.all([
-      (prisma as any).shopReview.findMany({
+      prisma.shopReview.findMany({
         where,
         include: {
           user: {
@@ -117,7 +114,7 @@ export class ReviewRepository {
         take: limit,
         orderBy: { createdAt: "desc" },
       }),
-      (prisma as any).shopReview.count({ where }),
+      prisma.shopReview.count({ where }),
     ]);
 
     return { reviews, total };
@@ -182,7 +179,7 @@ export class ReviewRepository {
   }
 
   async updateShopReview(id: string, data: any) {
-    return  prisma.shopReview.update({
+    return prisma.shopReview.update({
       where: { id },
       data,
     });

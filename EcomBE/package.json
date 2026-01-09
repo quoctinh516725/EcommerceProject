@@ -25,7 +25,8 @@
     "jsonwebtoken": "^9.0.3",
     "meilisearch": "^0.54.0",
     "mssql": "^12.2.0",
-    "prisma": "^6.19.1"
+    "prisma": "^6.19.1",
+    "socket.io": "^4.8.3"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
@@ -34,6 +35,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/mssql": "^9.1.8",
     "@types/node": "^25.0.3",
+    "@types/socket.io": "^3.0.1",
     "@typescript-eslint/eslint-plugin": "^8.50.1",
     "@typescript-eslint/parser": "^8.50.1",
     "dotenv-cli": "^11.0.0",

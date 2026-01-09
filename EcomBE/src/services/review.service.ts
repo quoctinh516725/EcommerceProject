@@ -272,7 +272,7 @@ export class ReviewService {
   }
 
   private async updateShopRatingAggregates(shopId: string) {
-    const aggregate = await (prisma as any).shopReview.aggregate({
+    const aggregate = await prisma.shopReview.aggregate({
       where: { shopId, isHidden: false },
       _avg: { rating: true },
     });
