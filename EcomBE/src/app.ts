@@ -19,12 +19,12 @@ import subOrderRoutes from "./routes/subOrder.routes";
 import paymentRoutes from "./routes/payment.routes";
 
 import reviewRoutes from "./routes/review.route";
+import chatRoutes from "./routes/chat.route";
+import notificationRoutes from "./routes/notification.route";
 
 const app = express();
 
-/** ---------------------------
- *  1. Security middlewares
- * --------------------------- */
+// 1. Security middlewares
 app.use(helmet());
 app.use(
   cors({
@@ -48,9 +48,7 @@ app.use(cookieParser());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-/** ---------------------------
- *  2. Rate limiting
- * --------------------------- */
+// 2. Rate limiting
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
@@ -61,9 +59,7 @@ app.use(
   authLimiter
 );
 
-/** ---------------------------
- *  3. Health check
- * --------------------------- */
+// 3. Health check
 app.get("/health", (_req, res) =>
   res.json({
     success: true,
@@ -72,9 +68,7 @@ app.get("/health", (_req, res) =>
   })
 );
 
-/** ---------------------------
- *  4. Routes
- * --------------------------- */
+// 4. Routes
 // Public (no auth)
 app.use("/api", publicRoutes);
 
@@ -89,10 +83,10 @@ app.use("/api/sub-orders", subOrderRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/reviews", reviewRoutes);
+app.use("/api/chat", chatRoutes);
+app.use("/api/notifications", notificationRoutes);
 
-/** ---------------------------
- *  5. Error handling
- * --------------------------- */
+// 5. Error handling
 app.use(notFoundHandler);
 app.use(errorHandler);
 
